@@ -4,6 +4,8 @@ import Wappalyzer from 'wappalyzer';
 import jsonfile from 'jsonfile';
 import {oraPromise} from 'ora';
 import * as fs from 'fs';
+import fetch from 'node-fetch';
+
 
 const getTechnologies = async(url) => {
 
@@ -98,20 +100,31 @@ const getImages = async(page) => {
 }
 
 const SaveReportToJSONFile = async(report) => {
-
-  let filename = report.url.replaceAll('https','');
-  filename = filename.replaceAll('http','');
-  filename = filename.replaceAll(':','');
-  filename = filename.replaceAll('/','');
-
-  filename += "-" + Date.now() + ".json";
-
   const dir = './data';
   if (!fs.existsSync(dir)){
       fs.mkdirSync(dir);
   }
 
-  jsonfile.writeFileSync(`${dir}/${filename}`, report);
+  jsonfile.writeFileSync(`${dir}/${report.filename}`, report);
+}
+
+const DownloadImages = async(report) => {
+
+  const dir = `./images/${report.filename}`;
+  if (!fs.existsSync(dir)){
+      fs.mkdirSync(dir);
+  }
+
+  for (const image of report.images) {
+    try {
+      let splitted = image.src.split('/');
+      const filename = splitted[splitted.length - 1];
+      let response = await fetch(image.src)
+      response.body.pipe(fs.createWriteStream(`${dir}/${filename}`));
+    } catch(e) {
+      continue;
+    }
+  }  
 }
 
 const getReportForURL = async(url, browser) => {
@@ -127,6 +140,7 @@ const getReportForURL = async(url, browser) => {
     externalCSS: null,
     images: null,
     date: null,
+    filename: null,
   }
   
   data.url = url;
@@ -143,6 +157,14 @@ const getReportForURL = async(url, browser) => {
   data.html = await oraPromise(getHTML(page), "Getting HTML");
   data.images = await oraPromise(getImages(page), "Getting images")
 
+  let filename = data.url.replaceAll('https','');
+  filename = filename.replaceAll('http','');
+  filename = filename.replaceAll(':','');
+  filename = filename.replaceAll('/','');
+  filename += "-" + Date.now() + ".json";
+
+  data.filename = filename;
+
   await page.close();
   return data;
 }
@@ -155,6 +177,8 @@ const url = 'https://www.amazon.co.uk/';
 
   const data = await getReportForURL(url, browser);
   SaveReportToJSONFile(data);
+
+  DownloadImages(data);
   
   await browser.close();
 
