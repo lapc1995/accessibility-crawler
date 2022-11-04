@@ -3,6 +3,7 @@ import {AxePuppeteer} from '@axe-core/puppeteer';
 import Wappalyzer from 'wappalyzer';
 import jsonfile from 'jsonfile';
 import {oraPromise} from 'ora';
+import * as fs from 'fs';
 
 const getTechnologies = async(url) => {
 
@@ -73,6 +74,7 @@ const getExternalCSS = async(page) => {
       }
     }
   }
+  return externalCSS;
 }
 
 const getHTML = async(page) => {
@@ -80,6 +82,19 @@ const getHTML = async(page) => {
     () =>  document.querySelector('*').outerHTML
   );
   return html;
+}
+
+const getImages = async(page) => {
+  const images = []
+  let imagesElements = await page.$$('img');
+  for (const image of imagesElements) {
+    var alt = await image.evaluate( node => node.getAttribute("alt"));
+    var src = await image.evaluate( node => node.getAttribute("src"));
+    if(alt != null || src != null) {
+      images.push({alt,src});
+    }
+  }
+  return images;
 }
 
 const SaveReportToJSONFile = async(report) => {
@@ -91,7 +106,12 @@ const SaveReportToJSONFile = async(report) => {
 
   filename += "-" + Date.now() + ".json";
 
-  jsonfile.writeFileSync(filename, report);
+  const dir = './data';
+  if (!fs.existsSync(dir)){
+      fs.mkdirSync(dir);
+  }
+
+  jsonfile.writeFileSync(`${dir}/${filename}`, report);
 }
 
 const getReportForURL = async(url, browser) => {
@@ -105,6 +125,7 @@ const getReportForURL = async(url, browser) => {
     html: null, 
     externalJavascript: null,
     externalCSS: null,
+    images: null,
     date: null,
   }
   
@@ -120,6 +141,8 @@ const getReportForURL = async(url, browser) => {
   data.externalJavascript = await oraPromise(getExternalJavacript(page), "Getting external javascript");
   data.externalCSS = await oraPromise(getExternalCSS(page), "Getting external CSS");
   data.html = await oraPromise(getHTML(page), "Getting HTML");
+  data.images = await oraPromise(getImages(page), "Getting images")
+
   await page.close();
   return data;
 }
