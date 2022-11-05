@@ -127,6 +127,30 @@ const DownloadImages = async(report) => {
   }  
 }
 
+const getReportForURLParallel = async(url, browser) => {
+  
+  let data = {
+    url: null,
+    accessibility: null,
+    technologies: null,
+    html: null, 
+    externalJavascript: null,
+    externalCSS: null,
+    images: null,
+    date: null,
+    filename: null,
+  }
+
+  const page = await browser.newPage();
+  await page.goto(url);
+
+  var result = await oraPromise(Promise.all([getTechnologies(url), getAccessibilityReport(page), getExternalCSS(page), getHTML(page), getImages(page)]), "Generating report");
+  console.log(result);
+
+  await page.close();
+
+}
+
 const getReportForURL = async(url, browser) => {
 
   console.log(`Generating Report - ${url}`)
@@ -174,11 +198,14 @@ const url = 'https://www.amazon.co.uk/';
 (async () => {
 
   const browser = await puppeteer.launch({headless: 'chrome'});
+  await getReportForURLParallel(url, browser);
 
+
+  /*
   const data = await getReportForURL(url, browser);
   SaveReportToJSONFile(data);
 
-  DownloadImages(data);
+  DownloadImages(data);*/
   
   await browser.close();
 
