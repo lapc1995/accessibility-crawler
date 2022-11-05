@@ -14,7 +14,7 @@ const getTechnologies = async(url) => {
     delay: 500,
     headers: {},
     maxDepth: 3,
-    maxUrls: 10,
+    maxUrls: 1,
     maxWait: 5000,
     recursive: true,
     probe: true,
@@ -144,11 +144,29 @@ const getReportForURLParallel = async(url, browser) => {
   const page = await browser.newPage();
   await page.goto(url);
 
-  var result = await oraPromise(Promise.all([getTechnologies(url), getAccessibilityReport(page), getExternalCSS(page), getHTML(page), getImages(page)]), "Generating report");
+  var result = await oraPromise(Promise.all([getAccessibilityReport(page), getTechnologies(url), getExternalJavacript(page), getExternalCSS(page), getHTML(page), getImages(page)]), "Generating report");
   console.log(result);
+
+  data.url = url,
+  data.accessibility = result[0];
+  data.technologies = result[1];
+  data.externalJavascript = result[2];
+  data.externalCSS = result[3];
+  data.html = result[4];
+  data.images = result[5];
+  data.date = Date.now();
+
+  let filename = data.url.replaceAll('https','');
+  filename = filename.replaceAll('http','');
+  filename = filename.replaceAll(':','');
+  filename = filename.replaceAll('/','');
+  filename += "-" + Date.now() + ".json";
+
+  data.filename = filename;
 
   await page.close();
 
+  return data;
 }
 
 const getReportForURL = async(url, browser) => {
@@ -198,14 +216,23 @@ const url = 'https://www.amazon.co.uk/';
 (async () => {
 
   const browser = await puppeteer.launch({headless: 'chrome'});
-  await getReportForURLParallel(url, browser);
 
+  var start = new Date()
+  var hrstart = process.hrtime()
 
-  /*
-  const data = await getReportForURL(url, browser);
+  const data = await getReportForURLParallel(url, browser);
+  console.log(data.filename);
   SaveReportToJSONFile(data);
 
-  DownloadImages(data);*/
+  var end = new Date() - start;
+  var hrend = process.hrtime(hrstart);
+
+  console.info('Execution time: %dms', end) 
+  console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)
+
+
+  
+  /*DownloadImages(data);*/
   
   await browser.close();
 
