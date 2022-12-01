@@ -10,6 +10,7 @@ import fetch from 'node-fetch';
 import { response } from 'express';
 import csvParser from 'csv-parser';
 
+import { getTechnologies } from './wappalyzerMiddleware.js'
 
 
 let chunkSize = 5;
@@ -68,465 +69,6 @@ const readWebsiteCSV = async(filename) => {
 } 
 
 
-const promiseTimeout = async (
-  promise,
-  fallback,
-  errorMessage = 'Operation took too long to complete',
-  maxWait = Math.min(100000, 10000)
-) => {
-  let timeout = null
-
-  if (!(promise instanceof Promise)) {
-    return Promise.resolve(promise)
-  }
-
-  return Promise.race([
-    new Promise((resolve, reject) => {
-      timeout = setTimeout(() => {
-        clearTimeout(timeout)
-
-        const error = new Error(errorMessage)
-
-        error.code = 'PROMISE_TIMEOUT_ERROR'
-
-        if (fallback !== undefined) {
-          console.log(error)
-
-          resolve(fallback)
-        } else {
-          reject(error)
-        }
-      }, maxWait)
-    }),
-    promise.then((value) => {
-      clearTimeout(timeout)
-
-      return value
-    }),
-  ])
-}
-
-
-function getDom(page, technologies = Wappalyzer.technologies) {
-  return page.evaluate((technologies) => {
-    return technologies
-      .filter(({ dom }) => dom && dom.constructor === Object)
-      .reduce((technologies, { name, dom }) => {
-        const toScalar = (value) =>
-          typeof value === 'string' || typeof value === 'number'
-            ? value
-            : !!value
-
-        Object.keys(dom).forEach((selector) => {
-          let nodes = []
-
-          try {
-            nodes = document.querySelectorAll(selector)
-          } catch (error) {
-            // Continue
-          }
-
-          if (!nodes.length) {
-            return
-          }
-
-          dom[selector].forEach(({ exists, text, properties, attributes }) => {
-            nodes.forEach((node) => {
-              if (
-                technologies.filter(({ name: _name }) => _name === name)
-                  .length >= 50
-              ) {
-                return
-              }
-
-              if (
-                exists &&
-                technologies.findIndex(
-                  ({ name: _name, selector: _selector, exists }) =>
-                    name === _name && selector === _selector && exists === ''
-                ) === -1
-              ) {
-                technologies.push({
-                  name,
-                  selector,
-                  exists: '',
-                })
-              }
-
-              if (text) {
-                // eslint-disable-next-line unicorn/prefer-text-content
-                const value = (
-                  node.textContent ? node.textContent.trim() : ''
-                ).slice(0, 1000000)
-
-                if (
-                  value &&
-                  technologies.findIndex(
-                    ({ name: _name, selector: _selector, text }) =>
-                      name === _name && selector === _selector && text === value
-                  ) === -1
-                ) {
-                  technologies.push({
-                    name,
-                    selector,
-                    text: value,
-                  })
-                }
-              }
-
-              if (properties) {
-                Object.keys(properties).forEach((property) => {
-                  if (
-                    Object.prototype.hasOwnProperty.call(node, property) &&
-                    technologies.findIndex(
-                      ({
-                        name: _name,
-                        selector: _selector,
-                        property: _property,
-                        value,
-                      }) =>
-                        name === _name &&
-                        selector === _selector &&
-                        property === _property &&
-                        value === toScalar(value)
-                    ) === -1
-                  ) {
-                    const value = node[property]
-
-                    if (typeof value !== 'undefined') {
-                      technologies.push({
-                        name,
-                        selector,
-                        property,
-                        value: toScalar(value),
-                      })
-                    }
-                  }
-                })
-              }
-
-              if (attributes) {
-                Object.keys(attributes).forEach((attribute) => {
-                  if (
-                    node.hasAttribute(attribute) &&
-                    technologies.findIndex(
-                      ({
-                        name: _name,
-                        selector: _selector,
-                        attribute: _atrribute,
-                        value,
-                      }) =>
-                        name === _name &&
-                        selector === _selector &&
-                        attribute === _atrribute &&
-                        value === toScalar(value)
-                    ) === -1
-                  ) {
-                    const value = node.getAttribute(attribute)
-
-                    technologies.push({
-                      name,
-                      selector,
-                      attribute,
-                      value: toScalar(value),
-                    })
-                  }
-                })
-              }
-            })
-          })
-        })
-
-        return technologies
-      }, [])
-  }, technologies)
-}
-
-
-function getJs(page, technologies = Wappalyzer.technologies) {
-  return page.evaluate((technologies) => {
-    return technologies
-      .filter(({ js }) => Object.keys(js).length)
-      .map(({ name, js }) => ({ name, chains: Object.keys(js) }))
-      .reduce((technologies, { name, chains }) => {
-        chains.forEach((chain) => {
-          chain = chain.replace(/\[([^\]]+)\]/g, '.$1')
-
-          const value = chain
-            .split('.')
-            .reduce(
-              (value, method) =>
-                value &&
-                value instanceof Object &&
-                Object.prototype.hasOwnProperty.call(value, method)
-                  ? value[method]
-                  : '__UNDEFINED__',
-              window
-            )
-
-          if (value !== '__UNDEFINED__') {
-            technologies.push({
-              name,
-              chain,
-              value:
-                typeof value === 'string' || typeof value === 'number'
-                  ? value
-                  : !!value,
-            })
-          }
-        })
-
-        return technologies
-      }, [])
-  }, technologies)
-}
-
-
-const getTechnologies = async(page) => {
-
-  const categories = JSON.parse(
-    fs.readFileSync(path.resolve(`./categories.json`))
-  )
-  
-  let technologies = {}
-  
-  for (const index of Array(27).keys()) {
-    const character = index ? String.fromCharCode(index + 96) : '_'
-  
-    technologies = {
-      ...technologies,
-      ...JSON.parse(
-        fs.readFileSync(
-          path.resolve(`./technologies/${character}.json`)
-        )
-      ),
-    }
-  }
-  
-  Wappalyzer.setTechnologies(technologies)
-  Wappalyzer.setCategories(categories)
-
-
-  let cookies = []
-  try {
-    cookies = (await page.cookies()).reduce(
-      (cookies, { name, value }) => ({
-        ...cookies,
-        [name.toLowerCase()]: [value],
-      }),
-      {}
-    )
-
-    // Change Google Analytics 4 cookie from _ga_XXXXXXXXXX to _ga_*
-    Object.keys(cookies).forEach((name) => {
-      if (/_ga_[A-Z0-9]+/.test(name)) {
-        cookies['_ga_*'] = cookies[name]
-
-        delete cookies[name]
-      }
-    })
-  } catch (error) {
-    error.message += ` (${url})`
-
-    console.log(error);
-    throw error;
-  }
-
-
-  let [scriptSrc, scripts] = await promiseTimeout(
-    (
-      await promiseTimeout(
-        page.evaluateHandle(() => {
-          const nodes = Array.from(
-            document.getElementsByTagName('script')
-          )
-
-          return [
-            nodes
-              .filter(
-                ({ src }) =>
-                  src && !src.startsWith('data:text/javascript;')
-              )
-              .map(({ src }) => src),
-            nodes
-              .map((node) => node.textContent)
-              .filter((script) => script),
-          ]
-        }),
-        { jsonValue: () => [] },
-        'Timeout (scripts)'
-      )
-    ).jsonValue(),
-    [],
-    'Timeout (scripts)'
-  )
-
-  let meta = await promiseTimeout(
-    (
-      await promiseTimeout(
-        page.evaluateHandle(() =>
-          Array.from(document.querySelectorAll('meta')).reduce(
-            (metas, meta) => {
-              const key =
-                meta.getAttribute('name') || meta.getAttribute('property')
-
-              if (key) {
-                metas[key.toLowerCase()] = metas[key.toLowerCase()] || []
-
-                metas[key.toLowerCase()].push(
-                  meta.getAttribute('content')
-                )
-              }
-
-              return metas
-            },
-            {}
-          )
-        ),
-        { jsonValue: () => [] },
-        'Timeout (meta)'
-      )
-    ).jsonValue(),
-    [],
-    'Timeout (meta)'
-  )
-
-  let links = await promiseTimeout(
-              (
-                await promiseTimeout(
-                  page.evaluateHandle(() =>
-                    Array.from(document.getElementsByTagName('a')).map(
-                      ({ hash, hostname, href, pathname, protocol, rel }) => ({
-                        hash,
-                        hostname,
-                        href,
-                        pathname,
-                        protocol,
-                        rel,
-                      })
-                    )
-                  ),
-                  { jsonValue: () => [] },
-                  'Timeout (links)'
-                )
-              ).jsonValue(),
-              [],
-              'Timeout (links)'
-            );
-
-
-  let text = await promiseTimeout(
-    (
-      await promiseTimeout(
-        page.evaluateHandle(
-          () =>
-            // eslint-disable-next-line unicorn/prefer-text-content
-            document.body && document.body.innerText
-        ),
-        { jsonValue: () => '' },
-        'Timeout (text)'
-      )
-    ).jsonValue(),
-    '',
-    'Timeout (text)'
-  )
-
-  let css = await promiseTimeout(
-    (
-      await promiseTimeout(
-        page.evaluateHandle((maxRows) => {
-          const css = []
-
-          try {
-            if (!document.styleSheets.length) {
-              return ''
-            }
-
-            for (const sheet of Array.from(document.styleSheets)) {
-              for (const rules of Array.from(sheet.cssRules)) {
-                css.push(rules.cssText)
-
-                if (css.length >= maxRows) {
-                  break
-                }
-              }
-            }
-          } catch (error) {
-            return ''
-          }
-
-          return css.join('\n')
-        }, 9999),
-        { jsonValue: () => '' },
-        'Timeout (css)'
-      )
-    ).jsonValue(),
-    '',
-    'Timeout (css)'
-  )
-  
-  //js
-  let js = await promiseTimeout(getJs(page), [], 'Timeout (js)')
-  //console.log(js, js.length);
-  const resultJs = await analyzeJs(js);
-  console.log("analyzeJs", resultJs.length);
-
-  // DOM
-  let dom = await promiseTimeout(getDom(page), [], 'Timeout (dom)')
-  //console.log(dom, dom.length);
-  const resultDom = await analyzeDom(dom);
-  console.log("analyzeDom", resultDom.length);
-
-
-  
-  console.log(certIssuer);
-  //console.log(headers);
-
-  var detections = await Wappalyzer.analyze({
-    url: await page.url(),
-    meta, //{ generator: ['WordPress'] },
-    headers,
-    scripts,
-    scriptSrc: scriptSrc,//['jquery-3.0.0.js'],
-    cookies, //{ awselb: [''] },
-    html: await getHTML(page),
-    links,
-    text,
-    css,
-    certIssuer,
-  });
-  const results = Wappalyzer.resolve(detections)
-
-  let detections2 = [detections, resultDom, resultJs].flat();
-
-  detections2 = detections2.filter(
-    (
-      { technology: { name }, pattern: { regex }, version },
-      index,
-      detections2
-    ) =>
-      detections2.findIndex(
-        ({
-          technology: { name: _name },
-          pattern: { regex: _regex },
-          version: _version,
-        }) =>
-          name === _name &&
-          version === _version &&
-          (!regex || regex.toString() === _regex.toString())
-      ) === index
-  )
-
-
-  const r = detections2;
-  const rr =  Wappalyzer.resolve(detections2);
-
-  console.log(r.length)
-  console.log(rr.length)
-
-  return rr;
-}
-
 /*
 const getTechnologies = async(url) => {
 
@@ -571,54 +113,17 @@ const getTechnologies = async(url) => {
 }*/
 
 
-const analyzeDom = async (dom, technologies = Wappalyzer.technologies) => {
-  return dom
-    .map(({ name, selector, exists, text, property, attribute, value }) => {
-      const technology = technologies.find(({ name: _name }) => name === _name)
 
-      if (typeof exists !== 'undefined') {
-        return Wappalyzer.analyzeManyToMany(technology, 'dom.exists', {
-          [selector]: [''],
-        })
-      }
 
-      if (typeof text !== 'undefined') {
-        return Wappalyzer.analyzeManyToMany(technology, 'dom.text', {
-          [selector]: [text],
-        })
-      }
 
-      if (typeof property !== 'undefined') {
-        return Wappalyzer.analyzeManyToMany(technology, `dom.properties.${property}`, {
-          [selector]: [value],
-        })
-      }
-
-      if (typeof attribute !== 'undefined') {
-        return Wappalyzer.analyzeManyToMany(technology, `dom.attributes.${attribute}`, {
-          [selector]: [value],
-        })
-      }
-    })
-    .flat()
-}
-
-const analyzeJs = (js, technologies = Wappalyzer.technologies) => {
-  return js
-    .map(({ name, chain, value }) => {
-      return Wappalyzer.analyzeManyToMany(
-        technologies.find(({ name: _name }) => name === _name),
-        'js',
-        { [chain]: [value] }
-      )
-    })
-    .flat()
-}
 
 const getAccessibilityReport = async(page) => {
   console.log("getAccessibilityReport");
-  const results = await new AxePuppeteer(page).analyze();
+  let results = await new AxePuppeteer(page).analyze();
   delete results.inapplicable;
+
+  results = cleanAccessaibilityReport(results);
+
   return results;
 }
 
@@ -771,41 +276,11 @@ const getReportForURLParallel = async(url, browser) => {
 
   page.on('response', async (response) => {
 
-    let tempHeaders = {};
-
-    const rawHeaders = response.headers()
-    Object.keys(rawHeaders).forEach((key) => {
-      tempHeaders[key] = [
-        ...(tempHeaders[key] || []),
-        ...(Array.isArray(rawHeaders[key])
-          ? rawHeaders[key]
-          : [rawHeaders[key]]),
-      ]
-    })
-
     
-    // Prevent cross-domain redirects
-    if (response.status() >= 300 && response.status() < 400) {
-      if (tempHeaders.location) {
-        const _url = new URL(tempHeaders.location.slice(-1), url)
-        const originalUrl = new URL(url);
-
-        if (
-          _url.hostname.replace(/^www\./, '') ===
-            originalUrl.hostname.replace(/^www\./, '')
-        ) {
-          //url = _url
-
-          return
-        }
-      }
-    }
-
-   certIssuer = response.securityDetails()
-      ? response.securityDetails().issuer()
-      : ''
 
   });
+
+  await startCoverage(page);
 
   let gotoResponse = null;
   try {
@@ -827,8 +302,13 @@ const getReportForURLParallel = async(url, browser) => {
     }
   }
 
+
+
+
+  var html = await getHTML(page);
+
   data.date = Date.now();
-  var result = await /*oraPromise(*/Promise.all([getAccessibilityReport(page), /*getTechnologies(url)*/ getTechnologies(page), getExternalJavacript(page), getExternalCSS(page), getHTML(page), getImages(page), getALinks(page),  generateFilename(url, data.date)])/*, `Generating report - ${url}`)*/;
+  var result = await Promise.all([getAccessibilityReport(page), getTechnologies(page, html), getExternalJavacript(page), getExternalCSS(page), getImages(page), getALinks(page), generateFilename(url, data.date), stopCoverage(page)]);
   //console.log(result, result.length);
   
   data.url = url,
@@ -836,15 +316,128 @@ const getReportForURLParallel = async(url, browser) => {
   data.technologies = result[1];
   data.externalJavascript = result[2];
   data.externalCSS = result[3];
-  data.html = result[4];
-  data.images = result[5];
-  data.alinks = result[6];
-  data.filename = result[7];
+  data.html = html;
+  data.images = result[4];
+  data.alinks = result[5];
+  data.filename = result[6];
+
+  //console.log(result);
+
+  data.jsCoverage = result[7].jsCoverage;
+  data.cssCoverage = result[7].cssCoverage;
 
   await page.close();
 
   return data;
 }
+
+const cleanAccessaibilityReport = (accessibilityReport) => {
+  cleanAccessibilityBarrier(accessibilityReport.passes);
+  cleanAccessibilityBarrier(accessibilityReport.incomplete);
+  cleanAccessibilityBarrier(accessibilityReport.violations);
+  return accessibilityReport;
+}
+
+const cleanAccessibilityBarrier = (list) => {
+
+  list.forEach(violation => {
+    delete violation.description;
+    delete violation.helpUrl;
+    delete violation.help;
+
+    violation.nodes.forEach(node => {
+
+      if(node.impact == null) {
+        delete node.impact;
+      }
+
+      if(node.any.length == 0) {
+        delete node.any;
+      } else {
+        node.any.forEach(any => {
+          delete any.message;
+
+          if(any.data == null) {
+            delete any.data;
+          }
+          if(any.relatedNodes.length == 0) {
+            delete any.relatedNodes;
+          }
+        });
+      }
+
+      if(node.all.length == 0) {
+        delete node.all;
+      } else {
+        node.all.forEach(all => {
+          delete all.message;
+
+          if(all.data == null) {
+            delete all.data;
+          }
+          if(all.relatedNodes.length == 0) {
+            delete all.relatedNodes;
+          }
+        });
+      }
+
+      if(node.none.length == 0) {
+        delete node.none;
+      } else {
+        node.none.forEach(none => {
+          delete none.message;
+
+          if(none.data == null) {
+            delete none.data;
+          }
+          if(none.relatedNodes.length == 0) {
+            delete none.relatedNodes;
+          }
+        });
+      }
+    }); 
+  });
+}
+
+const getCookies = async(page) => {
+  const cookies = await page.cookies()
+} 
+
+const startCoverage = async(page) => {
+    await Promise.all([page.coverage.startJSCoverage(), page.coverage.startCSSCoverage()]);
+}
+
+const stopCoverage = async (page) => {
+  
+  // Stops the coverage gathering
+  const [jsCoverage, cssCoverage] = await Promise.all([
+    page.coverage.stopJSCoverage(),
+    page.coverage.stopCSSCoverage(),
+  ]);
+
+  // Calculates # bytes being used based on the coverage
+  const calculateUsedBytes = (type, coverage) => 
+    coverage.map(({url, ranges, text}) => {
+      let usedBytes = 0;
+
+      ranges.forEach((range) => (usedBytes += range.end - range.start - 1));
+
+      return {
+        url,
+        type,
+        usedBytes,
+        totalBytes: text.length,
+        percentUsed: `${(usedBytes / text.length * 100).toFixed(2)}%`
+      };
+    });
+
+  return {
+    'jsCoverage': calculateUsedBytes('js', jsCoverage),
+    'cssCoverage': calculateUsedBytes('css', cssCoverage),
+  };
+}
+
+
 
 const getReportForURL = async(url, browser) => {
 
