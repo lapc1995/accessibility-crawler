@@ -403,18 +403,19 @@ export const getTechnologies = async(page , html) => {
     let js = await promiseTimeout(getJs(page), [], 'Timeout (js)')
     //console.log(js, js.length);
     const resultJs = await analyzeJs(js);
-    console.log("analyzeJs", resultJs.length);
+    //console.log("analyzeJs", resultJs.length);
   
     // DOM
     let dom = await promiseTimeout(getDom(page), [], 'Timeout (dom)')
     //console.log(dom, dom.length);
     const resultDom = await analyzeDom(dom);
-    console.log("analyzeDom", resultDom.length);
+    //console.log("analyzeDom", resultDom.length);
   
   
     
-    console.log(certIssuer);
-    //console.log(headers);
+    //console.log("certIssuer", certIssuer);
+    //console.log("headers", headers);
+    //console.log("xhr", xhr);
   
     var detections = await Wappalyzer.analyze({
       url: await page.url(),
@@ -428,8 +429,9 @@ export const getTechnologies = async(page , html) => {
       text,
       css,
       certIssuer,
+      xhr,
     });
-    const results = Wappalyzer.resolve(detections)
+    //const results = Wappalyzer.resolve(detections)
   
     let detections2 = [detections, resultDom, resultJs].flat();
   
@@ -455,8 +457,8 @@ export const getTechnologies = async(page , html) => {
     const r = detections2;
     const rr =  Wappalyzer.resolve(detections2);
   
-    console.log(r.length)
-    console.log(rr.length)
+    //console.log(r.length)
+    //console.log(rr.length)
   
     return rr;
   }
@@ -506,10 +508,10 @@ export const getTechnologies = async(page , html) => {
   }
 
 
-let certIssuer;
+let certIssuer = [];
 let headers;
 
-export const analyzeHeader = (response) => {
+export const analyzeHeader = (response, url) => {
     let tempHeaders = {};
 
     const rawHeaders = response.headers()
@@ -540,8 +542,55 @@ export const analyzeHeader = (response) => {
       }
     }
 
-   certIssuer = response.securityDetails()
-      ? response.securityDetails().issuer()
-      : ''
+    const currentCertIssuer  = response.securityDetails()
+    ? response.securityDetails().issuer()
+    : null;
+
+    if(currentCertIssuer && !certIssuer.includes(currentCertIssuer)){
+      certIssuer.push(currentCertIssuer);
+    }
+
+     headers = tempHeaders;
   }
+
+  const xhr = [];
+  const xhrDebounce = [];
+
+  export const analyseRequest = async (request, url) => { 
+
+    try {
+
+      url = new URL(url);
+
+      if (request.resourceType() === 'xhr') {
+        let hostname
+
+        try {
+          ;({ hostname } = new URL(request.url()))
+        } catch (error) {
+          request.abort('blockedbyclient')
+
+          return
+        }
+
+        if (!xhrDebounce.includes(hostname)) {
+          xhrDebounce.push(hostname)
+
+          setTimeout(async () => {
+            xhrDebounce.splice(xhrDebounce.indexOf(hostname), 1)
+
+            xhr[url.hostname] =
+              xhr[url.hostname] || []
+
+            if (!xhr[url.hostname].includes(hostname)) {
+              xhr[url.hostname].push(hostname)
+            }
+          }, 1000)
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
 

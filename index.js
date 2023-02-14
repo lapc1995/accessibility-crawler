@@ -13,6 +13,9 @@ import csvParser from 'csv-parser';
 import { getTechnologies } from './wappalyzerMiddleware.js'
 
 
+import archiver from 'archiver';
+
+
 let chunkSize = 5;
 
 const sliceIntoChunks = (arr, chunkSize) => {
@@ -174,8 +177,7 @@ const getImages = async(page) => {
   return images;
 }
 
-const SaveReportToJSONFile = async(report) => {
-  const dir = './data';
+const SaveReportToJSONFile = async(report, dir = './data') => {
   if (!fs.existsSync(dir)){
       fs.mkdirSync(dir);
   }
@@ -227,10 +229,17 @@ const getALinks = async(page) => {
 }
 
 const generateFilename = (url, date) => {
-  let filename = url.replaceAll('https','');
-  filename = filename.replaceAll('http','');
-  filename = filename.replaceAll(':','');
-  filename = filename.replaceAll('/','');
+  let filename = url.replaceAll('https://','');
+  filename = filename.replaceAll('http://','');
+
+  if(filename.slice(-1) == "/") {
+    filename = filename.slice(0, -1);
+  }
+
+  forbiddenFilenameCharacters.forEach((character) => {
+    filename = filename.replaceAll(character, "{");
+  });
+
   filename += "-" + date + ".json";
   return filename;
 }
@@ -239,14 +248,14 @@ let headers = {};
 let certIssuer;
 
 
-const getReportForURLParallel = async(url, browser) => {
+const getReportForURLParallel = async(url, browser, options = {}) => {
 
   console.log(url);
-  
+
   let data = {
+    originalUrl: null,
     url: null,
     accessibility: null,
-    technologies: null,
     html: null, 
     externalJavascript: null,
     externalCSS: null,
@@ -256,7 +265,9 @@ const getReportForURLParallel = async(url, browser) => {
     alinks: null,
   }
 
-
+  if(options.technologyReport) {
+    data["technologies"] = null;
+  }
 
   var status = null;
 
@@ -265,6 +276,13 @@ const getReportForURLParallel = async(url, browser) => {
   }
 
   const page = await browser.newPage();
+
+  if(options.phone) {
+    const pixel5 = puppeteer.devices['Pixel 5'];
+    await page.emulate(pixel5);
+  }
+
+
   page.setRequestInterception(true);
   page.on('request', (request) => {
     request.continue();
@@ -302,29 +320,35 @@ const getReportForURLParallel = async(url, browser) => {
     }
   }
 
-
-
-
   var html = await getHTML(page);
 
   data.date = Date.now();
-  var result = await Promise.all([getAccessibilityReport(page), getTechnologies(page, html), getExternalJavacript(page), getExternalCSS(page), getImages(page), getALinks(page), generateFilename(url, data.date), stopCoverage(page)]);
+
+  const tasks = [getAccessibilityReport(page), getExternalJavacript(page), getExternalCSS(page), getImages(page), getALinks(page), generateFilename(url, data.date), stopCoverage(page)];
+
+  if(options.technologyReport) {
+    tasks.push(getTechnologies(page, html));
+  }
+ 
+
+  var result = await Promise.all(tasks);
   //console.log(result, result.length);
   
-  data.url = url,
+  data.originalUrl = url;
+  data.url = page.url(),
   data.accessibility = result[0];
-  data.technologies = result[1];
-  data.externalJavascript = result[2];
-  data.externalCSS = result[3];
+  data.externalJavascript = result[1];
+  data.externalCSS = result[2];
   data.html = html;
-  data.images = result[4];
-  data.alinks = result[5];
-  data.filename = result[6];
+  data.images = result[3];
+  data.alinks = result[4];
+  data.filename = result[5];
+  data.jsCoverage = result[6].jsCoverage;
+  data.cssCoverage = result[6].cssCoverage;
 
-  //console.log(result);
-
-  data.jsCoverage = result[7].jsCoverage;
-  data.cssCoverage = result[7].cssCoverage;
+  if(options.technologyReport) {
+    data.technologies = result[7];
+  }
 
   await page.close();
 
@@ -431,9 +455,63 @@ const stopCoverage = async (page) => {
       };
     });
 
+  const jsCoverageByURL =  calculateUsedBytes('js', jsCoverage);
+  const cssCoverageByURL = calculateUsedBytes('css', cssCoverage);
+
+  const jsCoverageByURLNotRepeats = [];
+  jsCoverageByURL.forEach((item) => {
+
+    if(jsCoverageByURLNotRepeats.filter(i => i.url == item.url).length == 0) {
+    
+      const results = jsCoverageByURL.filter(elem => elem.url == item.ur);
+
+      let usedBytes = 0;
+      let totalBytes = 0;
+      results.forEach((result) => {
+        usedBytes += result.usedBytes;
+        totalBytes += result.totalBytes;
+      });
+
+      jsCoverageByURLNotRepeats.push({
+        url: item.url,
+        type: item.type,
+        usedBytes,
+        totalBytes,
+        percentUsed: `${(usedBytes / totalBytes * 100).toFixed(2)}%`
+      });
+    }
+  });
+
+  const cssCoverageByURLNotRepeats = [];
+  cssCoverageByURL.forEach((item) => {
+
+    if(cssCoverageByURLNotRepeats.filter(i => i.url == item.url).length == 0) {
+    
+      const results = cssCoverageByURL.filter(elem => elem.url == item.ur);
+
+      let usedBytes = 0;
+      let totalBytes = 0;
+      results.forEach((result) => {
+        usedBytes += result.usedBytes;
+        totalBytes += result.totalBytes;
+      });
+
+      cssCoverageByURLNotRepeats.push({
+        url: item.url,
+        type: item.type,
+        usedBytes,
+        totalBytes,
+        percentUsed: `${(usedBytes / totalBytes * 100).toFixed(2)}%`
+      });
+    }
+  });
+  
+
+
+
   return {
-    'jsCoverage': calculateUsedBytes('js', jsCoverage),
-    'cssCoverage': calculateUsedBytes('css', cssCoverage),
+    'jsCoverage': calculateUsedBytes('js', jsCoverageByURLNotRepeats),
+    'cssCoverage': calculateUsedBytes('css', cssCoverageByURLNotRepeats),
   };
 }
 
@@ -481,6 +559,74 @@ const getReportForURL = async(url, browser) => {
   return data;
 }
 
+const forbiddenFilenameCharacters = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+
+const analyseDomain = async (url, browser) => {
+
+  console.log(url);
+
+  let dirname = url.replaceAll('https://','');
+  dirname = dirname.replaceAll('http://','');
+  if(dirname.slice(-1) == '/') {
+    dirname = dirname.slice(0, -1);
+  }
+
+  forbiddenFilenameCharacters.forEach((character) => {
+    dirname = dirname.replaceAll(character, "{");
+  });
+
+  dirname = `./data/${dirname}`;
+
+  if(!fs.existsSync(dirname)) {
+    fs.mkdirSync(dirname);
+  }
+  
+  const primarySite = await analysePrimarySite(url, browser);
+  SaveReportToJSONFile(primarySite, dirname);
+  const phoneSite = await analysePhoneSite(url, browser);
+  SaveReportToJSONFile(phoneSite, dirname);
+  const secondarySite = await analyseSecondarySite(url + '/contact', browser);
+  SaveReportToJSONFile(secondarySite, dirname);
+
+  const result = await zipDomainFolder(dirname);
+  console.log(result);
+
+  //fs.rmSync(dirname, { recursive: true, force: true });
+
+}
+
+const analysePrimarySite = async (url, browser) => {
+  return await getReportForURLParallel(url, browser, {technologyReport: true}) 
+}
+
+const analyseSecondarySite = async (url, browser) => {
+  return await getReportForURLParallel(url, browser);
+}
+
+const analysePhoneSite = async (url, browser) => {
+  return await getReportForURLParallel(url, browser, {phone: true}) 
+}
+
+
+const zipDomainFolder = async(dir) => {
+  console.log("Zipping folder", dir);
+  const archive = archiver('zip', { zlib: { level: 9 }});
+  const stream = fs.createWriteStream(`./${dir}.zip`);
+
+  return new Promise((resolve, reject) => {
+    archive
+      .directory(dir, false)
+      .on('error', err => reject(err))
+      .pipe(stream)
+    ;
+
+    stream.on('close', () => resolve());
+    archive.finalize();
+  });
+}
+
+
+
 const url = /*'http://www.dksfbgsfdgkjfksddk.com';*/ /*"https://moodle.ciencias.ulisboa.pt/dasdd";*/ 'https://www.amazon.co.uk/';
 
 (async () => {
@@ -505,25 +651,31 @@ const url = /*'http://www.dksfbgsfdgkjfksddk.com';*/ /*"https://moodle.ciencias.
   console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)
   
   await browser.close();*/
+
+  const browser = await puppeteer.launch({headless: 'chrome'});
     
   var websites = await readWebsiteCSV('website.csv');
   var splittedWebsites = sliceIntoChunks(websites, chunkSize);
 
   for(let websitesL of splittedWebsites) {
-    console.log(websitesL)
     var start = new Date()
-    await BatchGenerateReport(websitesL);
+    //await BatchGenerateReport(websitesL);
+    await analyseDomain(websitesL[0].Domain, browser);
+    
+
     var end = new Date() - start;
     console.info('Execution time: %dms', end) 
   
   }
+
+  browser.close();
   
   
   //await startGeneratingReports(websites);
   //var start = new Date()
   //await BatchGenerateReport(websites);
   //var end = new Date() - start;
-  //console.info('Execution time: %dms', end) 
+  //console.info('Execution time: %dms', end)
 
 })();
 

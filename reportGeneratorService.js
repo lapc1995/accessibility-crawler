@@ -175,6 +175,7 @@ const getTechnologies = async(url) => {
     console.log(`Generating Report - ${url}`)
     
     let data = {
+      originalUrl: null,
       url: null,
       accessibility: null,
       technologies: null,
@@ -186,6 +187,7 @@ const getTechnologies = async(url) => {
       filename: null,
     }
     
+    data.originalUrl = url;
     data.url = url;
     data.date = Date.now();
     
