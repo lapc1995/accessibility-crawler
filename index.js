@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 import {AxePuppeteer} from '@axe-core/puppeteer';
 //import Wappalyzer from 'wappalyzer';
 import * as path from 'path';
-import Wappalyzer from 'wappalyzer-core';
+//import Wappalyzer from 'wappalyzer-core';
 import jsonfile from 'jsonfile';
 import {oraPromise} from 'ora';
 import * as fs from 'fs';
@@ -14,6 +14,8 @@ import { getTechnologies } from './wappalyzerMiddleware.js'
 
 
 import archiver from 'archiver';
+
+import Wappalyzer from './wappalyzer/drivers/npm/driver.js'
 
 
 let chunkSize = 5;
@@ -250,7 +252,24 @@ let certIssuer;
 
 const getReportForURLParallel = async(url, browser, options = {}) => {
 
-  console.log(url);
+  const wappalyzerOptions = {
+    debug: true,
+    delay: 500,
+    headers: {},
+    maxDepth: 3,
+    maxUrls: 1,
+    maxWait: 30000,
+    recursive: true,
+    probe: true,
+    proxy: false,
+    userAgent: 'Wappalyzer',
+    htmlMaxCols: 2000,
+    htmlMaxRows: 2000,
+    noScripts: false,
+    noRedirect: false,
+  };
+
+  const wappalyzer = new Wappalyzer(wappalyzerOptions);
 
   let data = {
     originalUrl: null,
@@ -281,23 +300,24 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   if(options.phone) {
     const pixel5 = puppeteer.devices['Pixel 5'];
     await page.emulate(pixel5);
+  } else {
+    await page.setViewport({ width: 1280, height: 720 });
   }
 
-
+  let site = null;
   page.setRequestInterception(true);
-  page.on('request', (request) => {
-    request.continue();
+  page.on('request', async (request) => {
+    await site.OnRequest(request, page);
   }); 
-  page.on("requestfinished", (request) => {
-    const response = request.response();
-    status = response.status();
-  });
-
   page.on('response', async (response) => {
-
-    
-
+    await site.OnResponse(response, page);
   });
+
+  site = await wappalyzer.open(url, {}, page);
+
+  // Optionally capture and output errors
+  site.on('error', console.error);
+
 
   await startCoverage(page);
 
@@ -327,13 +347,13 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
 
   const tasks = [getAccessibilityReport(page), getExternalJavacript(page), getExternalCSS(page), getImages(page), getALinks(page), generateFilename(url, data.date), stopCoverage(page), getCookies(page)];
 
+  let r;
   if(options.technologyReport) {
-    tasks.push(getTechnologies(page, html));
+    //r = await site.analyze(page);
   }
- 
 
   var result = await Promise.all(tasks);
-  
+
   data.originalUrl = url;
   data.url = page.url(),
   data.accessibility = result[0];
@@ -347,10 +367,8 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   data.cssCoverage = result[6].cssCoverage;
   data.cookies = result[7];
 
-  console.log(data.cookies);
-
-  if(options.technologyReport) {
-    data.technologies = cleanTechnologyReport(result[8]);
+  if(options.technologyReport && data.technologies != null) {
+    data.technologies = cleanTechnologyReport(r);
   }
 
   if(options.phone) {
@@ -667,28 +685,22 @@ const url = /*'http://www.dksfbgsfdgkjfksddk.com';*/ /*"https://moodle.ciencias.
 
 (async () => {
 
-  
-  /*
-  var websites = await readWebsiteCSV('websitee.csv');
-
-  const browser = await puppeteer.launch({headless: 'chrome'});
-
-  var start = new Date()
-  var hrstart = process.hrtime()
-
-  const data = await getReportForURLParallel(url, browser);
-  console.log(data.filename);
-  SaveReportToJSONFile(data);
-
-  var end = new Date() - start;
-  var hrend = process.hrtime(hrstart);
-
-  console.info('Execution time: %dms', end) 
-  console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)
-  
-  await browser.close();*/
-
-  const browser = await puppeteer.launch({headless: 'chrome'});
+  const browser = await puppeteer.launch({
+    headless: 'chrome',
+    ignoreHTTPSErrors: true,
+    acceptInsecureCerts: true,
+    
+    args: [
+        '--single-process',
+        '--no-sandbox',
+        '--no-zygote',
+        '--disable-gpu',
+        '--ignore-certificate-errors',
+        '--allow-running-insecure-content',
+        '--disable-web-security',
+        '--user-data-dir=/tmp/chromium'
+    ]
+  });
     
   var websites = await readWebsiteCSV('website.csv');
   var splittedWebsites = sliceIntoChunks(websites, chunkSize);
@@ -706,12 +718,6 @@ const url = /*'http://www.dksfbgsfdgkjfksddk.com';*/ /*"https://moodle.ciencias.
 
   browser.close();
   
-  
-  //await startGeneratingReports(websites);
-  //var start = new Date()
-  //await BatchGenerateReport(websites);
-  //var end = new Date() - start;
-  //console.info('Execution time: %dms', end)
 
 })();
 
