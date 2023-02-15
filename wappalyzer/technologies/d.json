@@ -67,8 +67,16 @@
     "cats": [
       59
     ],
+    "description": "DHTMLX specialises in building JavaScript UI libraries for project management, event planning, big data visualisation, and reporting.",
     "icon": "DHTMLX.png",
-    "scriptSrc": "dhtmlxcommon\\.js",
+    "js": {
+      "dhtmlDragAndDropObject": "",
+      "dhtmlXTreeItemObject": ""
+    },
+    "pricing": [
+      "onetime"
+    ],
+    "scriptSrc": "/dhtmlxcommon\\.js",
     "website": "http://dhtmlx.com"
   },
   "DM Polopoly": {
@@ -98,7 +106,7 @@
       "<!-- by DotNetNuke Corporation",
       "<!-- DNN Platform"
     ],
-    "icon": "DNN.png",
+    "icon": "DNN.svg",
     "implies": "Microsoft ASP.NET",
     "js": {
       "DotNetNuke": "",
@@ -164,6 +172,24 @@
       "\\bDX\\b"
     ],
     "website": "https://www.dxdelivery.com"
+  },
+  "DX1": {
+    "cats": [
+      53
+    ],
+    "description": "DX1 is an entirely cloud-based dealership management system for the motorcycle and powersports industry. Offering DMS, website, CRM and marketing tools.",
+    "icon": "DX1.png",
+    "js": {
+      "Dx1.Dnn": ""
+    },
+    "pricing": [
+      "high",
+      "recurring"
+    ],
+    "requires": "DNN",
+    "saas": true,
+    "scriptSrc": "\\.dx1app\\.com/",
+    "website": "https://www.dx1app.com"
   },
   "Dachser": {
     "cats": [
@@ -251,7 +277,7 @@
     },
     "icon": "Danneo CMS.png",
     "implies": [
-      "Apache",
+      "Apache HTTP Server",
       "PHP"
     ],
     "meta": {
@@ -323,7 +349,7 @@
     "icon": "DataLife Engine.svg",
     "implies": [
       "PHP",
-      "Apache"
+      "Apache HTTP Server"
     ],
     "js": {
       "dle_root": ""
@@ -491,6 +517,23 @@
     "scriptSrc": "dedeajax",
     "website": "http://dedecms.com"
   },
+  "Delacon": {
+    "cats": [
+      10
+    ],
+    "description": "Delacon provides Australian businesses with Call Tracking, Call Management and Speech Analytics solutions.",
+    "icon": "Delacon.png",
+    "js": {
+      "dela_247_call": "",
+      "delaconphonenums": ""
+    },
+    "pricing": [
+      "payg",
+      "recurring"
+    ],
+    "saas": true,
+    "website": "https://www.delacon.com.au"
+  },
   "Delivengo": {
     "cats": [
       99
@@ -568,6 +611,19 @@
     ],
     "saas": true,
     "website": "https://deno.land/"
+  },
+  "Depict": {
+    "cats": [
+      76
+    ],
+    "description": "Depict is an ecommerce personalisation solution for fashion.",
+    "dom": "link[href*='.depict.ai/']",
+    "icon": "Depict.svg",
+    "pricing": [
+      "poa"
+    ],
+    "saas": true,
+    "website": "https://depict.ai"
   },
   "DeskPro": {
     "cats": [
@@ -782,7 +838,7 @@
     "icon": "DirectAdmin.png",
     "implies": [
       "PHP",
-      "Apache"
+      "Apache HTTP Server"
     ],
     "website": "https://www.directadmin.com"
   },
@@ -911,7 +967,12 @@
       87
     ],
     "description": "Divi is a WordPress Theme and standalone WordPress plugin from Elegant themes that allows users to build websites using the visual drag-and-drop Divi page builder.",
-    "icon": "Divi.png",
+    "dom": {
+      "style#divi-style-parent-inline-inline-css": {
+        "text": "Version\\:\\s([\\d\\.]+)\\;version:\\1"
+      }
+    },
+    "icon": "Divi.svg",
     "js": {
       "DIVI": ""
     },
@@ -1039,13 +1100,17 @@
     "icon": "docusaurus.svg",
     "implies": [
       "React",
-      "webpack"
+      "Webpack"
     ],
     "js": {
-      "search.indexName": ""
+      "search.indexName": "",
+      "docusaurus": "",
+      "__DOCUSAURUS_INSERT_BASEURL_BANNER": ""
     },
     "meta": {
-      "generator": "^Docusaurus(?: v(.+))?$\\;version:\\1"
+      "generator": "^Docusaurus(?: v(.+))?$\\;version:\\1",
+      "docusaurus_locale": "",
+      "docusaurus_tag": ""
     },
     "website": "https://docusaurus.io/"
   },
@@ -1148,6 +1213,45 @@
     "scriptSrc": "/wp-content/plugins/iwd-checkout-connector/",
     "website": "https://www.dominate.co/woocommerce"
   },
+  "DonorPerfect": {
+    "cats": [
+      111
+    ],
+    "description": "DonorPerfect is a fundraising management software.",
+    "dom": {
+      "a[href*='.donorperfect.']": {
+        "attributes": {
+          "href": "\\.donorperfect\\.(?:com|net)"
+        }
+      }
+    },
+    "icon": "DonorPerfect.svg",
+    "pricing": [
+      "recurring",
+      "mid"
+    ],
+    "saas": true,
+    "scriptSrc": "\\.donorperfect\\.net/",
+    "website": "https://www.donorperfect.com"
+  },
+  "Donorbox": {
+    "cats": [
+      111
+    ],
+    "description": "Donorbox is a US-based technology company. It offers an online fundraising software that allows individuals and nonprofit organisations to receive donations over the Internet.",
+    "dom": "a[href*='//donorbox.org/'], iframe[src*='//donorbox.org/']",
+    "icon": "Donorbox.svg",
+    "js": {
+      "DONORBOX": "",
+      "DonorBox": "",
+      "donorbox_check_donation_period": ""
+    },
+    "pricing": [
+      "payg"
+    ],
+    "saas": true,
+    "website": "https://donorbox.org"
+  },
   "Doofinder": {
     "cats": [
       29
@@ -1165,6 +1269,45 @@
     "saas": true,
     "scriptSrc": "cdn\\.doofinder\\.com/",
     "website": "https://www.doofinder.com"
+  },
+  "Doppler": {
+    "cats": [
+      75
+    ],
+    "description": "Doppler is an email marketing and transactional email service.",
+    "icon": "Doppler.svg",
+    "pricing": [
+      "recurring",
+      "payg"
+    ],
+    "saas": true,
+    "scriptSrc": "//(?:hub|cdn)\\.fromdoppler\\.com/",
+    "website": "https://www.fromdoppler.com"
+  },
+  "Doppler Forms": {
+    "cats": [
+      87
+    ],
+    "description": "The Doppler Forms plugin allows you to create fully customised subscription forms that you can add to your website or blog.",
+    "icon": "Doppler.svg",
+    "implies": "Doppler",
+    "requires": "WordPress",
+    "scriptSrc": "/wp-content/plugins/doppler-form/.+\\.js(?:\\?ver=(\\d+(?:\\.\\d+)+))?\\;version:\\1",
+    "website": "https://wordpress.org/plugins/doppler-form/"
+  },
+  "Doppler for WooCommerce": {
+    "cats": [
+      87
+    ],
+    "description": "The Doppler for WooCommerce plugin adds submit your WooCommerce customers and buyers to a Doppler List.",
+    "icon": "Doppler.svg",
+    "implies": "Doppler",
+    "requires": [
+      "WordPress",
+      "WooCommerce"
+    ],
+    "scriptSrc": "/wp-content/plugins/doppler-for-woocommerce/.+\\.js(?:\\?ver=(\\d+(?:\\.\\d+)+))?\\;version:\\1",
+    "website": "https://wordpress.org/plugins/doppler-for-woocommerce/"
   },
   "Dotclear": {
     "cats": [
@@ -1282,6 +1425,27 @@
     "scriptSrc": "dttrk\\.com",
     "website": "https://dovetale.com/"
   },
+  "Download Monitor": {
+    "cats": [
+      87
+    ],
+    "description": "Download Monitor is a plugin for selling, uploading and managing downloads, tracking downloads and displaying links.",
+    "dom": "link[href*='/wp-content/plugins/download-monitor/']",
+    "icon": "Download Monitor.png",
+    "js": {
+      "DLM_XHR_Download": "",
+      "dlmXHR.prevent_duplicates": ""
+    },
+    "meta": {
+      "dlm-version": "^([\\d\\.]+)$\\;version:\\1"
+    },
+    "pricing": [
+      "freemium",
+      "onetime"
+    ],
+    "requires": "WordPress",
+    "website": "https://www.download-monitor.com"
+  },
   "Doxygen": {
     "cats": [
       4
@@ -1328,7 +1492,7 @@
       "X-Powered-By": "Dragon Native ([\\d.]+)\\;version:\\1"
     },
     "icon": "Dragon.png",
-    "implies": "Apache",
+    "implies": "Apache HTTP Server",
     "url": "^.*(?:\\.dgn)$",
     "website": "https://dragon-lang.org"
   },
@@ -1345,6 +1509,25 @@
     "requiresCategory": 6,
     "scriptSrc": "draprpubsubtest\\.firebaseapp\\.com/",
     "website": "https://www.drapr.com"
+  },
+  "DreamApply": {
+    "cats": [
+      101,
+      19
+    ],
+    "description": "DreamApply is a specialised student application management system designed with and for education institutions.",
+    "icon": "DreamApply.png",
+    "implies": [
+      "Linkedin Sign-in",
+      "Facebook Login",
+      "Google Sign-in"
+    ],
+    "pricing": [
+      "poa"
+    ],
+    "saas": true,
+    "scriptSrc": "app\\.cdn\\.dreamapply\\.com/",
+    "website": "https://dreamapply.com"
   },
   "DreamHost": {
     "cats": [
@@ -1370,7 +1553,7 @@
     "description": "Dreamweaver is a development tool for creating, publishing, and managing websites and mobile content.",
     "html": [
       "<!--[^>]*(?:InstanceBeginEditable|Dreamweaver([^>]+)target|DWLayoutDefaultTable)\\;version:\\1",
-      "<!-- #BeginDate format:"
+      "<!-- #BeginTemplate\\s\"[\\d_\\w/]+\\.dwt"
     ],
     "icon": "DreamWeaver.png",
     "js": {
@@ -1387,7 +1570,7 @@
     ],
     "description": "Dreamdata is a B2B revenue attribution platform.",
     "dom": "link[href*='.bizible.com']",
-    "icon": "Dreamdata.png",
+    "icon": "Dreamdata.svg",
     "js": {
       "BizTrackingA": "",
       "Bizible": ""
@@ -1741,6 +1924,23 @@
     "saas": true,
     "website": "https://dyte.io",
     "xhr": "cdn\\.dyte\\.in/"
+  },
+  "daisyUI": {
+    "cats": [
+      66
+    ],
+    "description": "daisyUI is a customisable Tailwind CSS component library that prevents verbose markup in frontend applications. With a focus on customising and creating themes for user interfaces, daisyUI uses pure CSS and Tailwind utility classes, allowing developers to write clean HTML.",
+    "dom": {
+      "link[href*='npm/daisyui']": {
+        "attributes": {
+          "href": "/npm/daisyui@([\\d\\.]+)/dist/\\;version:\\1"
+        }
+      }
+    },
+    "icon": "daisyUI.png",
+    "implies": "Tailwind CSS",
+    "oss": true,
+    "website": "https://daisyui.com"
   },
   "db-ip": {
     "cats": [

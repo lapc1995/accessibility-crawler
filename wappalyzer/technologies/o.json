@@ -253,6 +253,9 @@
     "description": "October is a free, open-source, self-hosted CMS platform based on the Laravel PHP Framework.",
     "icon": "October CMS.png",
     "implies": "Laravel",
+    "js": {
+      "ocJSON": ""
+    },
     "meta": {
       "generator": "OctoberCMS"
     },
@@ -517,6 +520,23 @@
     "scriptSrc": "omnisrc\\.com",
     "website": "https://www.omnisend.com"
   },
+  "Omnisend Email Marketing & SMS": {
+    "cats": [
+      100
+    ],
+    "description": "Omnisend Email Marketing & SMS is an omnichannel marketing automation channel that allows Shopify store owners to manage their SMS, web push notifications, WhatsApp, Facebook messenger, pop-ups, segmentation, and dynamic Facebook and Google ad integrations.",
+    "icon": "Omnisend.svg",
+    "implies": "Omnisend",
+    "pricing": [
+      "low",
+      "freemium",
+      "recurring"
+    ],
+    "requires": "Shopify",
+    "saas": true,
+    "scriptSrc": "omnis(?:nippet1|rc)\\.com/inShop/Embed/shopify\\.js",
+    "website": "https://apps.shopify.com/omnisend"
+  },
   "Omny Studio": {
     "cats": [
       5
@@ -624,6 +644,20 @@
     "scriptSrc": "api\\.oneall\\.com/socialize",
     "website": "https://www.oneall.com"
   },
+  "OneCause": {
+    "cats": [
+      111
+    ],
+    "description": "OneCause is a fundraising platform designed for nonprofits to manage all types of fundraising campaigns.",
+    "dom": "a[href*='.onecause.com/'][target='_blank']",
+    "icon": "OneCause.svg",
+    "pricing": [
+      "poa"
+    ],
+    "saas": true,
+    "scriptSrc": "\\.onecause\\.com/",
+    "website": "https://www.onecause.com"
+  },
   "OnePage Express": {
     "cats": [
       80
@@ -700,7 +734,10 @@
       "OptanonConsent": ""
     },
     "description": "OneTrust is a cloud-based data privacy management compliance platform.",
-    "icon": "OneTrust.png",
+    "dns": {
+      "TXT": "onetrust-domain-verification="
+    },
+    "icon": "OneTrust.svg",
     "scriptSrc": [
       "cdn\\.cookielaw\\.org",
       "optanon\\.blob\\.core\\.windows\\.net",
@@ -885,7 +922,7 @@
       22
     ],
     "cpe": "cpe:2.3:a:openbsd:openbsd:*:*:*:*:*:*:*:*",
-    "excludes": "Apache",
+    "excludes": "Apache HTTP Server",
     "headers": {
       "Server": "^OpenBSD httpd"
     },
@@ -1018,7 +1055,7 @@
     "headers": {
       "Server": "openresty(?:/([\\d.]+))?\\;version:\\1"
     },
-    "icon": "OpenResty.png",
+    "icon": "OpenResty.svg",
     "implies": [
       "Nginx"
     ],
@@ -1117,6 +1154,18 @@
     ],
     "website": "http://openx.com"
   },
+  "OperateBeyond": {
+    "cats": [
+      53
+    ],
+    "description": "OperateBeyond is a software development company that offers website design, automated inventory management, CRM, dealer websites, and DMS.",
+    "icon": "OperateBeyond.png",
+    "pricing": [
+      "poa"
+    ],
+    "scriptSrc": "//dealer-cdn\\.com/",
+    "website": "https://operatebeyond.com/dealer-websites-marketing"
+  },
   "OpinionLab": {
     "cats": [
       73
@@ -1166,7 +1215,8 @@
   },
   "Optimizely": {
     "cats": [
-      74
+      74,
+      76
     ],
     "cookies": {
       "optimizelyEndUserId": ""
@@ -1186,22 +1236,49 @@
     "scriptSrc": "optimizely\\.com.*\\.js",
     "website": "https://www.optimizely.com"
   },
-  "Optimizely CMS": {
+  "Optimizely Commerce": {
+    "cats": [
+      6
+    ],
+    "cookies": {
+      "EPi:StateMarker": ""
+    },
+    "description": "Optimizely Commerce is a complete suite for digital ecommerce and content management that uses artificial intelligence to deliver personalised experiences, individualised search rankings and product recommendations.",
+    "icon": "Optimizely.svg",
+    "meta": {
+      "generator": "EPiServer"
+    },
+    "pricing": [
+      "poa"
+    ],
+    "requiresCategory": 6,
+    "website": "https://www.optimizely.com/products/commerce/b2c/"
+  },
+  "Optimizely Content Management": {
     "cats": [
       1
     ],
     "cookies": {
+      "EPi:StateMarker": "",
       "EPiServer": "",
       "EPiSessionId": "",
       "EPiTrace": ""
     },
     "cpe": "cpe:2.3:a:episerver:episerver:*:*:*:*:*:*:*:*",
-    "icon": "optimizely-cms.svg",
+    "description": "Optimizely Content Management (formerly EPiServer) is digital content, ecommerce, and marketing management solution designed for editors and marketers.",
+    "headers": {
+      "content-security-policy": "\\.episerver\\.net"
+    },
+    "icon": "Optimizely.svg",
     "implies": "Microsoft ASP.NET",
     "meta": {
       "generator": "EPiServer"
     },
-    "website": "https://www.optimizely.com/"
+    "pricing": [
+      "poa"
+    ],
+    "scriptSrc": "\\.episerver.net/",
+    "website": "https://www.optimizely.com/products/content/"
   },
   "Optimove": {
     "cats": [
@@ -1517,6 +1594,22 @@
     ],
     "saas": true,
     "website": "https://orderyoyo.com"
+  },
+  "Ordergroove": {
+    "cats": [
+      41
+    ],
+    "description": "Ordergroove provides a SaaS (Software as a Service) based subscription and membership commerce platform.",
+    "headers": {
+      "content-security-policy": "\\.ordergroove\\.com"
+    },
+    "icon": "ordergroove.svg",
+    "pricing": [
+      "recurring",
+      "mid"
+    ],
+    "scriptSrc": "\\.ordergroove\\.com/",
+    "website": "https://www.ordergroove.com/"
   },
   "Ordersify Product Alerts": {
     "cats": [

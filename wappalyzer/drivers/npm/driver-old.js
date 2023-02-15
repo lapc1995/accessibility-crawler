@@ -5,7 +5,7 @@ const path = require('path')
 const http = require('http')
 const https = require('https')
 const puppeteer = require('puppeteer')
-const Wappalyzer = require('./wappalyzer.cjs')
+const Wappalyzer = require('../../wappalyzer')
 
 const { setTechnologies, setCategories, analyze, analyzeManyToMany, resolve } =
   Wappalyzer
@@ -354,6 +354,7 @@ class Driver {
     this.destroyed = false
   }
 
+  /*
   async init() {
     this.log('Launching browser...')
 
@@ -387,7 +388,7 @@ class Driver {
     } catch (error) {
       throw new Error(error.toString())
     }
-  }
+  }*/
 
   async destroy() {
     this.destroyed = true
@@ -418,10 +419,10 @@ class Driver {
 }
 
 class Site {
-  constructor(url, headers = {}, driver) {
+  constructor(url, headers = {}, driver, page) {
     ;({
       options: this.options,
-      browser: this.browser,
+      //browser: this.browser,
       init: this.initDriver,
     } = driver)
 
@@ -452,6 +453,11 @@ class Site {
     this.probed = false
 
     this.destroyed = false
+  }
+
+  
+  async OnDetectExternal(url, data) {
+    await this.onDetect(url, analyze(data))
   }
 
   log(message, source = 'driver', type = 'log') {
@@ -521,140 +527,7 @@ class Site {
     ])
   }
 
-  async onResponse(response) {
-    if (this.destroyed || !page || page.__closed || page.isClosed()) {
-      return
-    }
-
-    try {
-      if (
-        response.status() < 300 &&
-        response.frame().url() === url.href &&
-        response.request().resourceType() === 'script'
-      ) {
-        const scripts = await response.text()
-
-        await this.onDetect(response.url(), analyze({ scripts }))
-      }
-    } catch (error) {
-      if (error.constructor.name !== 'ProtocolError') {
-        error.message += ` (${url})`
-
-        this.error(error)
-      }
-    }
-
-    try {
-      if (response.url() === url.href) {
-        this.analyzedUrls[url.href] = {
-          status: response.status(),
-        }
-
-        const rawHeaders = response.headers()
-        const headers = {}
-
-        Object.keys(rawHeaders).forEach((key) => {
-          headers[key] = [
-            ...(headers[key] || []),
-            ...(Array.isArray(rawHeaders[key])
-              ? rawHeaders[key]
-              : [rawHeaders[key]]),
-          ]
-        })
-
-        // Prevent cross-domain redirects
-        if (response.status() >= 300 && response.status() < 400) {
-          if (headers.location) {
-            const _url = new URL(headers.location.slice(-1), url)
-
-            if (
-              _url.hostname.replace(/^www\./, '') ===
-                this.originalUrl.hostname.replace(/^www\./, '') ||
-              (Object.keys(this.analyzedUrls).length === 1 &&
-                !this.options.noRedirect)
-            ) {
-              url = _url
-
-              return
-            }
-          }
-        }
-
-        responseReceived = true
-
-        const certIssuer = response.securityDetails()
-          ? response.securityDetails().issuer()
-          : ''
-
-        await this.onDetect(url, analyze({ headers, certIssuer }))
-
-        await this.emit('response', { page, response, headers, certIssuer })
-      }
-    } catch (error) {
-      error.message += ` (${url})`
-
-      this.error(error)
-    }
-  }
-
-  async onRequest(request) {
-
-    try {
-      if (request.resourceType() === 'xhr') {
-        let hostname
-
-        try {
-          ;({ hostname } = new URL(request.url()))
-        } catch (error) {
-          request.abort('blockedbyclient')
-
-          return
-        }
-
-        if (!xhrDebounce.includes(hostname)) {
-          xhrDebounce.push(hostname)
-
-          setTimeout(async () => {
-            xhrDebounce.splice(xhrDebounce.indexOf(hostname), 1)
-
-            this.analyzedXhr[url.hostname] =
-              this.analyzedXhr[url.hostname] || []
-
-            if (!this.analyzedXhr[url.hostname].includes(hostname)) {
-              this.analyzedXhr[url.hostname].push(hostname)
-
-              await this.onDetect(url, analyze({ xhr: hostname }))
-            }
-          }, 1000)
-        }
-      }
-
-      if (
-        (responseReceived && request.isNavigationRequest()) ||
-        request.frame() !== page.mainFrame() ||
-        !['document', ...(this.options.noScripts ? [] : ['script'])].includes(
-          request.resourceType()
-        )
-      ) {
-        request.abort('blockedbyclient')
-      } else {
-        const headers = {
-          ...request.headers(),
-          ...this.options.headers,
-        }
-
-        await this.emit('request', { page, request })
-
-        request.continue({ headers })
-      }
-    } catch (error) {
-      error.message += ` (${url})`
-
-      this.error(error)
-    }
-  }
-
-  async goto(url) {
+  async goto(page = null, url) {
     if (this.destroyed) {
       return
     }
@@ -670,19 +543,19 @@ class Site {
       status: 0,
     }
 
+    /*
     if (!this.browser) {
       await this.initDriver()
 
       if (!this.browser) {
         throw new Error('Browser closed')
       }
-    }
+    */
 
-    /*
-    let page
+    //let page
 
     try {
-      page = await this.browser.newPage()
+      //page = await this.browser.newPage()
 
       if (!page || page.isClosed()) {
         throw new Error('Page did not open')
@@ -692,33 +565,31 @@ class Site {
 
       this.error(error)
 
-      await this.initDriver()
+     // await this.initDriver()
 
-      page = await this.browser.newPage()
-    }*/
+      //page = await this.browser.newPage()
+    }
 
-    /*
     this.pages.push(page)
 
-    page.setJavaScriptEnabled(!this.options.noScripts)
+    //page.setJavaScriptEnabled(!this.options.noScripts)
 
-    page.setDefaultTimeout(this.options.maxWait)
+    //page.setDefaultTimeout(this.options.maxWait)
 
-    await page.setRequestInterception(true)
+    //await page.setRequestInterception(true)
 
-    await page.setUserAgent(this.options.userAgent)
+    //await page.setUserAgent(this.options.userAgent)
 
-    page.on('dialog', (dialog) => dialog.dismiss())
-
+    //page.on('dialog', (dialog) => dialog.dismiss())
+    /*
     page.on('error', (error) => {
       error.message += ` (${url})`
 
       this.error(error)
     })
 
-    let responseReceived = false*/
+    let responseReceived = false
 
-    /*
     page.on('request', async (request) => {
       try {
         if (request.resourceType() === 'xhr') {
@@ -853,7 +724,9 @@ class Site {
     })*/
 
     try {
-      //await page.goto(url.href)
+
+      /*
+      await page.goto(url.href)
 
       if (page.url() === 'about:blank') {
         const error = new Error(`The page failed to load (${url})`)
@@ -861,7 +734,7 @@ class Site {
         error.code = 'WAPPALYZER_PAGE_EMPTY'
 
         throw error
-      }
+      }*/
 
       if (!this.options.noScripts) {
         await sleep(1000)
@@ -1076,6 +949,15 @@ class Site {
         dom = await this.promiseTimeout(getDom(page), [], 'Timeout (dom)')
       }
 
+      //console.log("page", page);
+      //console.log("html", html);
+      //console.log("text", text);
+      //console.log("cookies", cookies);
+      //console.log("scripts", scripts);
+      //console.log("scriptSrc", scriptSrc);
+      //console.log("meta", meta);
+
+  
       this.cache[url.href] = {
         page,
         html,
@@ -1184,7 +1066,7 @@ class Site {
     await Promise.allSettled([
       (async () => {
         try {
-          const links = ((await this.goto(url)) || []).filter(
+          const links = ((await this.goto(page, url)) || []).filter(
             ({ href }) => !this.analyzedUrls[href]
           )
 

@@ -248,7 +248,7 @@
       10
     ],
     "description": "Naver Analytics is a Korean based analytics service.",
-    "icon": "Naver.svg",
+    "icon": "Naver Analytics.svg",
     "meta": {
       "naver-site-verification": ""
     },
@@ -265,7 +265,7 @@
       35
     ],
     "description": "Naver Maps help develop location-based services which provided by Naver.",
-    "icon": "Naver.svg",
+    "icon": "Naver Maps.svg",
     "js": {
       "naver.maps": ""
     },
@@ -306,6 +306,26 @@
     "saas": true,
     "scriptSrc": "cdn\\.neatab\\.com/",
     "website": "https://neatab.com"
+  },
+  "Neon CRM": {
+    "cats": [
+      53,
+      111
+    ],
+    "description": "Neon CRM, a Neon One company, is a cloud-based customer relationship management (CRM) software suite for nonprofits of all sizes. Applications include fundraising management, donor management, membership management, event registration and management, customised reporting, and more.",
+    "dom": "a[href*='.app.neoncrm.com/']",
+    "icon": "Neon One.svg",
+    "js": {
+      "_neoncrm_ga": "",
+      "neonPayCard": "",
+      "neoncrm_email_ajax_object": ""
+    },
+    "pricing": [
+      "mid",
+      "recurring"
+    ],
+    "saas": true,
+    "website": "https://neonone.com"
   },
   "Neos CMS": {
     "cats": [
@@ -431,6 +451,20 @@
       "Nette.version": "^(.+)$\\;version:\\1"
     },
     "website": "https://nette.org"
+  },
+  "Network for Good": {
+    "cats": [
+      111
+    ],
+    "description": "Network for Good is an American certified B Corporation software company that offers fundraising software and coaching for charities and non-profit organisations.",
+    "dom": "a[href*='.networkforgood.com/']",
+    "icon": "Network for Good.svg",
+    "pricing": [
+      "poa"
+    ],
+    "saas": true,
+    "scriptSrc": "\\.networkforgood\\.com/",
+    "website": "https://www.networkforgood.com"
   },
   "Neve": {
     "cats": [
@@ -569,7 +603,7 @@
     "icon": "Next.js.svg",
     "implies": [
       "React",
-      "webpack",
+      "Webpack",
       "Node.js"
     ],
     "js": {
@@ -577,6 +611,20 @@
       "next.version": "^(.+)$\\;version:\\1"
     },
     "website": "https://nextjs.org"
+  },
+  "NextAuth.js": {
+    "cats": [
+      69
+    ],
+    "cookies": {
+      "__Host-next-auth.csrf-token": "",
+      "__Secure-next-auth.callback-url": ""
+    },
+    "description": "NextAuth.js is a complete open-source authentication solution for Next.js applications.",
+    "icon": "Next-Auth.png",
+    "oss": true,
+    "requires": "Next.js",
+    "website": "https://next-auth.js.org"
   },
   "NextGEN Gallery": {
     "cats": [
@@ -638,6 +686,25 @@
     "icon": "Nextdoor Ads.png",
     "scriptSrc": "ads\\.nextdoor\\.com/",
     "website": "https://help.nextdoor.com/s/article/About-Neighborhood-Ad-Center-NAC-Conversion-Pixel"
+  },
+  "Nextra": {
+    "cats": [
+      57
+    ],
+    "description": "Nextra is Next.js based static site generator.",
+    "dom": [
+      "div.nextra-container",
+      "div.nextra-nav-container",
+      "div.nextra-sidebar-container"
+    ],
+    "icon": "Nextra.svg",
+    "js": {
+      "__nextra_internal__": "",
+      "__nextra_pageContext__": ""
+    },
+    "oss": true,
+    "requires": "Next.js",
+    "website": "https://nextra.site/"
   },
   "Nextsale": {
     "cats": [
@@ -738,7 +805,8 @@
   },
   "Ninja Forms": {
     "cats": [
-      87
+      87,
+      110
     ],
     "description": "Ninja Forms is the WordPress form builder.",
     "dom": "link[href*='/wp-content/plugins/ninja-forms/']",
@@ -801,7 +869,7 @@
     ],
     "cpe": "cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*",
     "description": "Node.js is an open-source, cross-platform, JavaScript runtime environment that executes JavaScript code outside a web browser.",
-    "icon": "node.js.png",
+    "icon": "Node.js.svg",
     "website": "http://nodejs.org"
   },
   "NodeBB": {
@@ -837,6 +905,21 @@
     ],
     "saas": true,
     "website": "https://nodeping.com"
+  },
+  "Noibu": {
+    "cats": [
+      13
+    ],
+    "description": "Noibu helps ecommerce websites detect revenue-impacting errors on their websites and provides them with the information needed to resolve them.",
+    "icon": "noibu.svg",
+    "js": {
+      "NOIBUJS_CONFIG": ""
+    },
+    "pricing": [
+      "poa"
+    ],
+    "saas": true,
+    "website": "https://noibu.com"
   },
   "Norton Shopping Guarantee": {
     "cats": [

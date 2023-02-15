@@ -167,10 +167,25 @@
     "scriptSrc": "^rainloop/v/([0-9.]+)/\\;version:\\1",
     "website": "https://www.rainloop.net/"
   },
+  "RaiseDonors": {
+    "cats": [
+      111
+    ],
+    "description": "RaiseDonors is for anyone raising money and cultivating donor relationships online.",
+    "dom": "a[href*='//raisedonors.com/'][target='_blank']",
+    "icon": "RaiseDonors.png",
+    "meta": {
+      "author": "^RaiseDonors$"
+    },
+    "pricing": [
+      "poa"
+    ],
+    "saas": true,
+    "website": "https://explore.raisedonors.com"
+  },
   "Raisely": {
     "cats": [
-      51,
-      41
+      111
     ],
     "description": "Raisely is a cloud-based fundraising platform that helps non-profits and charities drive fundraising campaigns and collect donations.",
     "icon": "Raisely.svg",
@@ -576,6 +591,44 @@
     "url": "^https?//.+\\.reactiveonline\\.io",
     "website": "https://reactiveonline.io"
   },
+  "ReadMe": {
+    "cats": [
+      4,
+      1
+    ],
+    "description": "ReadMe is a content management system that businesses use to create and manage technical or API documentation.",
+    "icon": "readme.svg",
+    "meta": {
+      "readme-deploy": "^[\\d\\.]+$",
+      "readme-version": "^[\\d\\.]+$"
+    },
+    "pricing": [
+      "freemium",
+      "mid",
+      "recurring"
+    ],
+    "scriptSrc": "/cdn\\.readme\\.io/js/",
+    "website": "https://readme.com"
+  },
+  "ReadSpeaker": {
+    "cats": [
+      5
+    ],
+    "description": "ReadSpeaker is an intuitive text-to-speech API that converts text into natural-sounding audio files for websites and applications.",
+    "icon": "ReadSpeaker.svg",
+    "js": {
+      "ReadSpeaker": "",
+      "ReadSpeaker.meta.version": "^([\\d\\.]+)_.+$\\;version:\\1"
+    },
+    "pricing": [
+      "poa",
+      "low",
+      "recurring"
+    ],
+    "saas": true,
+    "scriptSrc": "\\.readspeaker\\.com/",
+    "website": "https://www.readspeaker.com"
+  },
   "Readymag": {
     "cats": [
       51
@@ -874,7 +927,7 @@
       2
     ],
     "html": "(?:<a[^>]+Powered by Reddit|powered by <a[^>]+>reddit<)",
-    "icon": "Reddit.png",
+    "icon": "Reddit.svg",
     "implies": "Python",
     "js": {
       "reddit": ""
@@ -887,7 +940,7 @@
       36
     ],
     "description": "Reddit Ads is an online advertising offering from Reddit.",
-    "icon": "Reddit.png",
+    "icon": "Reddit.svg",
     "scriptSrc": "www\\.redditstatic\\.com",
     "website": "https://advertising.reddithelp.com/"
   },
@@ -1147,6 +1200,22 @@
     "oss": true,
     "website": "https://remix.run/"
   },
+  "Render Better": {
+    "cats": [
+      92,
+      100
+    ],
+    "description": "Render Better is automated site speed and core web vital optimisation platform for Shopify.",
+    "dns": {
+      "CNAME": "\\.renderbetter\\.app"
+    },
+    "icon": "renderbetter.svg",
+    "js": {
+      "renderbetter": ""
+    },
+    "requires": "Shopify",
+    "website": "https://www.renderbetter.com"
+  },
   "Reputon": {
     "cats": [
       90,
@@ -1169,7 +1238,7 @@
       12
     ],
     "description": "RequireJS is a JavaScript library and file loader which manages the dependencies between JavaScript files and in modular programming.",
-    "icon": "RequireJS.png",
+    "icon": "RequireJS.svg",
     "js": {
       "requirejs.version": "^(.+)$\\;version:\\1"
     },
@@ -1215,6 +1284,25 @@
     },
     "scriptSrc": "www\\.resengo\\.\\w+",
     "website": "https://wwc.resengo.com"
+  },
+  "Reserve In-Store": {
+    "cats": [
+      100,
+      93
+    ],
+    "description": "Reserve In-Store app will allow customers to reserve an item in your store online to come to pick it up or view the item before making the purchase.",
+    "icon": "Reserve In-Store.svg",
+    "implies": "Shopify",
+    "js": {
+      "reserveInStore.version": "([\\d\\.]+)\\;version:\\1",
+      "reserveInStoreJsUrl": "/reserveinstore\\.js.+\\.myshopify\\.com"
+    },
+    "pricing": [
+      "low",
+      "recurring"
+    ],
+    "saas": true,
+    "website": "https://www.reserveinstore.com"
   },
   "Reservio": {
     "cats": [
@@ -1369,6 +1457,22 @@
     "saas": true,
     "scriptSrc": "cdn\\.retailrocket\\.net",
     "website": "https://retailrocket.net"
+  },
+  "Return Prime": {
+    "cats": [
+      100,
+      102
+    ],
+    "description": "Return Prime is an application to manage returns for Shopify stores.",
+    "icon": "return-prime.png",
+    "pricing": [
+      "freemium",
+      "low",
+      "recurring"
+    ],
+    "requires": "Shopify",
+    "scriptSrc": "//return-prime-proxy-prod\\.s3[^ ]*\\.amazonaws\\.com/",
+    "website": "https://www.returnprime.com/"
   },
   "ReturnGO": {
     "cats": [
@@ -1869,6 +1973,24 @@
     "scriptSrc": "\\.rocketfy\\.mx/",
     "website": "https://rocketfy.mx"
   },
+  "Roistat": {
+    "cats": [
+      10,
+      74
+    ],
+    "description": "Roistat is a marketing analytics system.",
+    "icon": "roistat.svg",
+    "js": {
+      "roistatHost": "",
+      "roistatProjectId": ""
+    },
+    "pricing": [
+      "mid",
+      "recurring",
+      "poa"
+    ],
+    "website": "https://roistat.com/"
+  },
   "Rokt": {
     "cats": [
       76
@@ -1909,7 +2031,7 @@
       "recurring"
     ],
     "saas": true,
-    "website": "https://rotic.ir"
+    "website": "https://rotic.io"
   },
   "RoundCube": {
     "cats": [

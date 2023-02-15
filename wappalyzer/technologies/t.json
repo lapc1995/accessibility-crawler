@@ -341,7 +341,7 @@
         }
       }
     },
-    "icon": "default.svg",
+    "icon": "Tachyons.svg",
     "js": {
       "webpackChunkgatsby_starter_blog_tachyons": ""
     },
@@ -394,6 +394,26 @@
     "saas": true,
     "scriptSrc": "\\.tagboard\\.com/",
     "website": "https://tagboard.com"
+  },
+  "Tagembed": {
+    "cats": [
+      96,
+      5
+    ],
+    "description": "Tagembed is a social media aggregator that collects and displays engaging user-generated content from any social media network such as Instagram, Facebook, Twitter, Youtube, Tiktok, Google Reviews, Airbnb, and 18+ networks.",
+    "icon": "Tagembed.svg",
+    "dom": "script[data-src*='widget.tagembed.com/']",
+    "js": {
+      "TagembedWidget": ""
+    },
+    "saas": true,
+    "pricing": [
+      "freemium",
+      "low",
+      "recurring"
+    ],
+    "scriptSrc": "//widget\\.tagembed\\.com/",
+    "website": "https://tagembed.com"
   },
   "Taggbox": {
     "cats": [
@@ -458,7 +478,10 @@
       }
     },
     "icon": "tailwindcss.svg",
-    "scriptSrc": "\\.tailwindcss\\.com",
+    "js": {
+      "tailwind": ""
+    },
+    "scriptSrc": "\\.tailwindcss(?:tailwind-config-cdn)?\\.(?:com|js)",
     "website": "https://tailwindcss.com/"
   },
   "TakeDrop": {
@@ -524,6 +547,28 @@
     ],
     "saas": true,
     "website": "https://tallentor.com"
+  },
+  "Tally": {
+    "cats": [
+      73
+    ],
+    "description": "Tally is the simplest way to create free forms & surveys. Create any type of form in seconds, without knowing how to code, and for free.",
+    "dom": [
+      "iframe[data-tally-src^='https://tally.so/embed/']",
+      "a[href*='//tally.so/r/']"
+    ],
+    "icon": "Tally.svg",
+    "js": {
+      "Tally": ""
+    },
+    "pricing": [
+      "freemium",
+      "low",
+      "recurring"
+    ],
+    "saas": true,
+    "scriptSrc": "//tally\\.so/",
+    "website": "https://tally.so/"
   },
   "Tamago": {
     "cats": [
@@ -626,7 +671,7 @@
       "TawkConnectionTime": ""
     },
     "description": "Tawk.to is a free messaging app to monitor and chat with the visitors to a website, mobile app.",
-    "icon": "TawkTo.png",
+    "icon": "TawkTo.svg",
     "pricing": [
       "freemium",
       "payg"
@@ -735,6 +780,21 @@
     },
     "website": "https://www.jetbrains.com/teamcity/"
   },
+  "Teamtailor": {
+    "cats": [
+      101
+    ],
+    "description": "Teamtailor is an applicant tracking system, career site and analytics dashboard combined, mobile friendly, and  all-in-one recruitment platform.",
+    "icon": "teamtailor.svg",
+    "js": {
+      "Teamtailor.Ziggeo": ""
+    },
+    "pricing": [
+      "mid",
+      "recurring"
+    ],
+    "website": "https://www.teamtailor.com"
+  },
   "Tebex": {
     "cats": [
       6
@@ -747,6 +807,10 @@
           "text": "Tebex"
         }
       }
+    },
+    "headers": {
+      "tb-cache-country": "^\\w+$\\;confidence:50",
+      "tb-cache-group": "^webstore$\\;confidence:50"
     },
     "icon": "Tebex.svg",
     "implies": [
@@ -1941,12 +2005,13 @@
     ],
     "cpe": "cpe:2.3:a:tiny:tinymce:*:*:*:*:*:*:*:*",
     "description": "TinyMCE is an online rich-text editor released as open-source software. TinyMCE is designed to integrate with JavaScript libraries, Vue.js, and AngularJS as well as content management systems such as Joomla!, and WordPress.",
-    "icon": "TinyMCE.png",
+    "icon": "TinyMCE.svg",
     "js": {
-      "tinyMCE.majorVersion": "([\\d.]+)\\;version:\\1"
+      "tinyMCE.majorVersion": "([\\d.]+)\\;version:\\1",
+      "tinymce": ""
     },
     "scriptSrc": "/tiny_?mce(?:\\.min)?\\.js",
-    "website": "http://tinymce.com"
+    "website": "https://www.tiny.cloud/tinymce/"
   },
   "Tippy.js": {
     "cats": [
@@ -2170,6 +2235,20 @@
     "scriptSrc": "swrap\\.tradedoubler\\.com",
     "website": "https://www.tradedoubler.com/"
   },
+  "TradingView": {
+    "cats": [
+      25
+    ],
+    "description": "TradingView is used to show world chart, chats and trades markets.",
+    "dom": "iframe[src*='.tradingview.com/']",
+    "icon": "trading_view.svg",
+    "pricing": [
+      "low",
+      "freemium",
+      "recurring"
+    ],
+    "website": "https://www.tradingview.com"
+  },
   "Traek": {
     "cats": [
       10
@@ -2217,10 +2296,12 @@
   },
   "Transcy": {
     "cats": [
-      89
+      89,
+      100
     ],
-    "description": "Transcy allows you to translate your whole store content into target languages to reach different nation shoppers.",
+    "description": "Transcy is a Shopify translation app. Transcy allows you to translate your whole store content into target languages to reach different nation shoppers.",
     "icon": "Transcy.png",
+    "implies": "Shopify",
     "js": {
       "_transcy": "",
       "transcy_apiURI": "",
@@ -2231,7 +2312,6 @@
       "low",
       "recurring"
     ],
-    "requires": "Shopify",
     "saas": true,
     "website": "https://transcy.io"
   },
@@ -2514,6 +2594,18 @@
     "icon": "Truecommerce.svg",
     "scriptSrc": "cdn\\.nexternal\\.com/",
     "website": "https://www.truecommerce.com"
+  },
+  "Truepush": {
+    "cats": [
+      32
+    ],
+    "description": "Truepush is web-based push notification service available for PWA, AMP, WordPress, and Shopify.",
+    "icon": "truepush.svg",
+    "js": {
+      "truepush": "",
+      "truepushVersionInfo.key": "v([\\d\\.]+)\\;version:\\1"
+    },
+    "website": "https://www.truepush.com"
   },
   "Trumba": {
     "cats": [
@@ -2883,6 +2975,47 @@
     "scriptSrc": "/wp-content/themes/twentytwentyone/",
     "website": "https://wordpress.org/themes/twentytwentyone"
   },
+  "Twenty Twenty-Three": {
+    "cats": [
+      80
+    ],
+    "description": "Twenty Twenty-Three is the default WordPress theme for 2023.",
+    "dom": {
+      "style#webfonts-inline-css": {
+        "text": "/wp-content/themes/twentytwentythree/assets/fonts/"
+      },
+      "style#wp-webfonts-inline-css": {
+        "text": "/wp-content/themes/twentytwentythree/assets/fonts/"
+      }
+    },
+    "icon": "WordPress.svg",
+    "pricing": [
+      "freemium"
+    ],
+    "requires": "WordPress",
+    "website": "https://wordpress.org/themes/twentytwentythree"
+  },
+  "Twenty Twenty-Two": {
+    "cats": [
+      80
+    ],
+    "description": "Twenty Twenty-Two is the default WordPress theme for 2022.",
+    "dom": {
+      "link#twentytwentytwo-style-css": {},
+      "style#webfonts-inline-css": {
+        "text": "/wp-content/themes/twentytwentytwo/assets/fonts/"
+      },
+      "style#wp-webfonts-inline-css": {
+        "text": "/wp-content/themes/twentytwentytwo/assets/fonts/"
+      }
+    },
+    "icon": "WordPress.svg",
+    "pricing": [
+      "freemium"
+    ],
+    "requires": "WordPress",
+    "website": "https://wordpress.org/themes/twentytwentytwo"
+  },
   "TwicPics": {
     "cats": [
       31,
@@ -2959,6 +3092,17 @@
     },
     "icon": "Twilight CMS.png",
     "website": "http://www.twilightcms.com"
+  },
+  "Twilio Authy": {
+    "cats": [
+      69
+    ],
+    "description": "Twilio Authy provides Two-factor authentication (2FA) adds an additional layer of protection beyond passwords.",
+    "icon": "twilio_authy.svg",
+    "js": {
+      "Authy": ""
+    },
+    "website": "https://authy.com"
   },
   "TwistPHP": {
     "cats": [
@@ -3216,12 +3360,13 @@
     "website": "https://www.thetradedesk.com",
     "xhr": "adsvr\\.org"
   },
-  "three.js": {
+  "Three.js": {
     "cats": [
       25
     ],
     "description": "Three.js is a cross-browser JavaScript library and application programming interface used to create and display animated 3D computer graphics in a web browser using WebGL.",
-    "icon": "three.js.png",
+    "dom": "canvas[data-engine*='three.js']",
+    "icon": "Three.js.svg",
     "js": {
       "THREE.REVISION": "^(.+)$\\;version:\\1",
       "__THREE__": "^(.+)$\\;version:\\1"

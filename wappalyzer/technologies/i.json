@@ -40,9 +40,9 @@
     "headers": {
       "Server": "^(?:Microsoft-)?IIS(?:/([\\d.]+))?\\;version:\\1"
     },
-    "icon": "IIS.png",
+    "icon": "Microsoft.svg",
     "implies": "Windows Server",
-    "website": "http://www.iis.net"
+    "website": "https://www.iis.net"
   },
   "INFOnline": {
     "cats": [
@@ -109,8 +109,8 @@
       "x-ipfs-root-cid": "",
       "x-ipfs-roots": ""
     },
-    "icon": "IPFS.png",
-    "website": "https://ipfs.io/"
+    "icon": "IPFS.svg",
+    "website": "https://ipfs.tech/"
   },
   "IPInfoDB": {
     "cats": [
@@ -508,7 +508,7 @@
     "html": "<(?:link|a href) [^>]+ndxz-studio",
     "implies": [
       "PHP",
-      "Apache",
+      "Apache HTTP Server",
       "Exhibit"
     ],
     "meta": {
@@ -712,6 +712,18 @@
     "scriptSrc": "instafeed\\.nfcube\\.com/",
     "website": "https://apps.shopify.com/instafeed"
   },
+  "Instamojo": {
+    "cats": [
+      41
+    ],
+    "description": "Instamojo is a Bangalore-based company that provides a platform for selling digital goods and collecting payment online.",
+    "icon": "instamojo.svg",
+    "js": {
+      "INITIAL_STATE.seller.avatar": "\\.instamojo\\.com/",
+      "Instamojo": ""
+    },
+    "website": "https://www.instamojo.com/"
+  },
   "Instana": {
     "cats": [
       10,
@@ -893,6 +905,11 @@
       53
     ],
     "description": "Intercom is an American software company that produces a messaging platform which allows businesses to communicate with prospective and existing customers within their app, on their website, through social media, or via email.",
+    "dom": [
+      "link[href^='https://widget.intercom.io']",
+      "div.live-chat-loader-placeholder",
+      "iframe#intercom-frame"
+    ],
     "icon": "Intercom.svg",
     "js": {
       "Intercom": ""
@@ -1101,6 +1118,25 @@
     ],
     "website": "https://iterable.com/"
   },
+  "Ivory Search": {
+    "cats": [
+      87
+    ],
+    "description": "Ivory Search is a WordPress search plugin that improves WordPress search by providing advanced options to extend search or exclude specific content from search.",
+    "icon": "ivory_searc.png",
+    "js": {
+      "IvorySearchVars": "",
+      "ivory_search_analytics": ""
+    },
+    "pricing": [
+      "freemium",
+      "recurring",
+      "onetime"
+    ],
+    "requires": "WordPress",
+    "scriptSrc": "/wp-content/plugins/add-search-to-menu/.+\\.js(?:\\?ver=(\\d+(?:\\.\\d+)+))?\\;version:\\1",
+    "website": "https://ivorysearch.com"
+  },
   "Izooto": {
     "cats": [
       32,
@@ -1179,7 +1215,7 @@
     "icon": "iEXExchanger.png",
     "implies": [
       "PHP",
-      "Apache",
+      "Apache HTTP Server",
       "Angular"
     ],
     "meta": {
@@ -1297,7 +1333,7 @@
       1
     ],
     "description": "imperia CMS is a headless content management for large editorial.",
-    "dom": "source[srcset*='.de/imperia/md/images/]",
+    "dom": "source[srcset*='.de/imperia/md/images/']",
     "icon": "imperiaCMS.svg",
     "implies": "Perl",
     "meta": {
