@@ -182,7 +182,7 @@ const SaveReportToJSONFile = async(report, dir = './data') => {
       fs.mkdirSync(dir);
   }
 
-  jsonfile.writeFileSync(`${dir}/${report.filename}`, report);
+  jsonfile.writeFileSync(`${dir}/${report.filename}.json`, report);
 }
 
 const DownloadImages = async(report) => {
@@ -240,7 +240,7 @@ const generateFilename = (url, date) => {
     filename = filename.replaceAll(character, "{");
   });
 
-  filename += "-" + date + ".json";
+  filename += "-" + date;
   return filename;
 }
 
@@ -263,6 +263,7 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
     date: null,
     filename: null,
     alinks: null,
+    cookies: null,
   }
 
   if(options.technologyReport) {
@@ -324,7 +325,7 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
 
   data.date = Date.now();
 
-  const tasks = [getAccessibilityReport(page), getExternalJavacript(page), getExternalCSS(page), getImages(page), getALinks(page), generateFilename(url, data.date), stopCoverage(page)];
+  const tasks = [getAccessibilityReport(page), getExternalJavacript(page), getExternalCSS(page), getImages(page), getALinks(page), generateFilename(url, data.date), stopCoverage(page), getCookies(page)];
 
   if(options.technologyReport) {
     tasks.push(getTechnologies(page, html));
@@ -332,7 +333,6 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
  
 
   var result = await Promise.all(tasks);
-  //console.log(result, result.length);
   
   data.originalUrl = url;
   data.url = page.url(),
@@ -345,14 +345,31 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   data.filename = result[5];
   data.jsCoverage = result[6].jsCoverage;
   data.cssCoverage = result[6].cssCoverage;
+  data.cookies = result[7];
+
+  console.log(data.cookies);
 
   if(options.technologyReport) {
-    data.technologies = result[7];
+    data.technologies = cleanTechnologyReport(result[8]);
+  }
+
+  if(options.phone) {
+    data.filename += "phone";
   }
 
   await page.close();
 
   return data;
+}
+
+const cleanTechnologyReport = (technologyReport) => {
+  technologyReport.forEach(technology => cleanTechnology(technology));
+  return technologyReport;
+}
+
+const cleanTechnology = (technology) => {
+  delete technology.description;
+  delete technology.icon;
 }
 
 const cleanAccessaibilityReport = (accessibilityReport) => {
@@ -424,7 +441,8 @@ const cleanAccessibilityBarrier = (list) => {
 }
 
 const getCookies = async(page) => {
-  const cookies = await page.cookies()
+  const cookies = await page.cookies();
+  return cookies;
 } 
 
 const startCoverage = async(page) => {
@@ -455,7 +473,7 @@ const stopCoverage = async (page) => {
       };
     });
 
-  const jsCoverageByURL =  calculateUsedBytes('js', jsCoverage);
+  const jsCoverageByURL = calculateUsedBytes('js', jsCoverage);
   const cssCoverageByURL = calculateUsedBytes('css', cssCoverage);
 
   const jsCoverageByURLNotRepeats = [];
@@ -463,7 +481,7 @@ const stopCoverage = async (page) => {
 
     if(jsCoverageByURLNotRepeats.filter(i => i.url == item.url).length == 0) {
     
-      const results = jsCoverageByURL.filter(elem => elem.url == item.ur);
+      const results = jsCoverageByURL.filter(elem => elem.url == item.url);
 
       let usedBytes = 0;
       let totalBytes = 0;
@@ -487,7 +505,7 @@ const stopCoverage = async (page) => {
 
     if(cssCoverageByURLNotRepeats.filter(i => i.url == item.url).length == 0) {
     
-      const results = cssCoverageByURL.filter(elem => elem.url == item.ur);
+      const results = cssCoverageByURL.filter(elem => elem.url == item.url);
 
       let usedBytes = 0;
       let totalBytes = 0;
@@ -510,8 +528,8 @@ const stopCoverage = async (page) => {
 
 
   return {
-    'jsCoverage': calculateUsedBytes('js', jsCoverageByURLNotRepeats),
-    'cssCoverage': calculateUsedBytes('css', cssCoverageByURLNotRepeats),
+    'jsCoverage': jsCoverageByURLNotRepeats,
+    'cssCoverage': cssCoverageByURLNotRepeats,
   };
 }
 
@@ -582,14 +600,24 @@ const analyseDomain = async (url, browser) => {
   }
   
   const primarySite = await analysePrimarySite(url, browser);
+  saveHtmlToFile(dirname, primarySite.filename, primarySite.html);
+  delete primarySite.html;  
   SaveReportToJSONFile(primarySite, dirname);
+
+
   const phoneSite = await analysePhoneSite(url, browser);
+  saveHtmlToFile(dirname, phoneSite.filename, phoneSite.html);
+  delete phoneSite.html;  
   SaveReportToJSONFile(phoneSite, dirname);
+
+
   const secondarySite = await analyseSecondarySite(url + '/contact', browser);
+  saveHtmlToFile(dirname, secondarySite.filename, secondarySite.html);
+  delete secondarySite.html;  
   SaveReportToJSONFile(secondarySite, dirname);
 
   const result = await zipDomainFolder(dirname);
-  console.log(result);
+
 
   //fs.rmSync(dirname, { recursive: true, force: true });
 
@@ -625,6 +653,14 @@ const zipDomainFolder = async(dir) => {
   });
 }
 
+const saveHtmlToFile = async(dir, filename, htmlContent) => {
+    try {
+      fs.writeFileSync(`${dir}/${filename}.html`, htmlContent);
+      // file written successfully
+    } catch (err) {
+      console.error(err);
+    }
+}
 
 
 const url = /*'http://www.dksfbgsfdgkjfksddk.com';*/ /*"https://moodle.ciencias.ulisboa.pt/dasdd";*/ 'https://www.amazon.co.uk/';
