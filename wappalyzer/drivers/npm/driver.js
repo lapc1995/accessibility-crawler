@@ -554,7 +554,7 @@ class Site {
     promise,
     fallback,
     errorMessage = 'Operation took too long to complete',
-    maxWait = Math.min(this.options.maxWait, 1000)
+    maxWait = Math.min(this.options.maxWait, 10000)
   ) {
     let timeout = null
 
@@ -1180,25 +1180,26 @@ class Site {
 
       page.__closed = true
 
+      /*
       try {
         await page.close()
 
         this.log(`Page closed (${url})`)
       } catch (error) {
         // Continue
-      }
+      }*/
 
       return reducedLinks
     } catch (error) {
       page.__closed = true
-
+      /*
       try {
         await page.close()
 
         this.log(`Page closed (${url})`)
       } catch (error) {
         // Continue
-      }
+      }*/
 
       if (error.message.includes('net::ERR_NAME_NOT_RESOLVED')) {
         const newError = new Error(`Hostname could not be resolved (${url})`)
