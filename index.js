@@ -347,10 +347,10 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
 
   const tasks = [getAccessibilityReport(page), getExternalJavacript(page), getExternalCSS(page), getImages(page), getALinks(page), generateFilename(url, data.date), stopCoverage(page), getCookies(page)];
 
-  let r;
   if(options.technologyReport) {
-    //r = await site.analyze(page);
+    tasks.push(site.analyze(page));
   }
+
 
   var result = await Promise.all(tasks);
 
@@ -367,8 +367,8 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   data.cssCoverage = result[6].cssCoverage;
   data.cookies = result[7];
 
-  if(options.technologyReport && data.technologies != null) {
-    data.technologies = cleanTechnologyReport(r);
+  if(options.technologyReport && result[8] != null) {
+    data.technologies = cleanTechnologyReport(result[8].technologies);
   }
 
   if(options.phone) {

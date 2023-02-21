@@ -1,0 +1,20 @@
+{
+    "@context": "http://luiscarvalho.dev/contexts/index.json",
+    "@type": "pageReport",
+     "cookies": [
+          {
+              "name": "csm-hit",
+              "value": "tb:s-QG4RXGSEXNFPNG6NERMZ|1676634059983&t:1676634060332&adb:adblk_yes",
+              "domain": "www.amazon.co.uk",
+              "path": "/",
+              "expires": 1706874060,
+              "size": 76,
+              "httpOnly": false,
+              "secure": false,
+              "session": false,
+              "sameParty": false,
+              "sourceScheme": "Secure",
+              "sourcePort": 443
+          }
+    ]
+  }
