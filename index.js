@@ -1,14 +1,15 @@
 import puppeteer from 'puppeteer';
 import {AxePuppeteer} from '@axe-core/puppeteer';
-//import Wappalyzer from 'wappalyzer';
 import * as path from 'path';
-//import Wappalyzer from 'wappalyzer-core';
 import jsonfile from 'jsonfile';
 import {oraPromise} from 'ora';
 import * as fs from 'fs';
 import fetch from 'node-fetch';
 import { response } from 'express';
 import csvParser from 'csv-parser';
+
+import * as dotenv from 'dotenv'
+dotenv.config()
 
 import { getTechnologies } from './wappalyzerMiddleware.js'
 
@@ -73,55 +74,6 @@ const readWebsiteCSV = async(filename) => {
   return result;
 } 
 
-
-/*
-const getTechnologies = async(url) => {
-
-  console.log("getTechnologies", url);
-
-  const options = {
-    debug: true,
-    delay: 500,
-    headers: {},
-    maxDepth: 3,
-    maxUrls: 1,
-    maxWait: 10000,
-    recursive: true,
-    probe: true,
-    proxy: false,
-    userAgent: 'Wappalyzer',
-    htmlMaxCols: 2000,
-    htmlMaxRows: 2000,
-    noScripts: false,
-    noRedirect: false,
-  };
-  
-  const wappalyzer = new Wappalyzer(options);
-
-  let technologies = null;
-  try {
-    await wappalyzer.init()
-    const site = await wappalyzer.open(url, {})
-    console.log("a", url)
-    const results = await site.analyze()
-    console.log("b", url)
-    await wappalyzer.destroy()
-    console.log("c", url)
-    technologies =  results;
-    console.log("d", url)
-  } catch (error) {
-    console.error(error)
-  } 
-
-  console.log("f", url);
-  return technologies;
-}*/
-
-
-
-
-
-
 const getAccessibilityReport = async(page) => {
   console.log("getAccessibilityReport");
   let results = await new AxePuppeteer(page).analyze();
@@ -184,7 +136,7 @@ const SaveReportToJSONFile = async(report, dir = './data') => {
       fs.mkdirSync(dir);
   }
 
-  jsonfile.writeFileSync(`${dir}/${report.filename}.json`, report);
+  jsonfile.writeFileSync(`${dir}/${report.filename}.jsonld`, report);
 }
 
 const DownloadImages = async(report) => {
@@ -245,10 +197,6 @@ const generateFilename = (url, date) => {
   filename += "-" + date;
   return filename;
 }
-
-let headers = {};
-let certIssuer;
-
 
 const getReportForURLParallel = async(url, browser, options = {}) => {
 
@@ -351,9 +299,10 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
     tasks.push(site.analyze(page));
   }
 
-
   var result = await Promise.all(tasks);
 
+  data["@context"] = "http://luiscarvalho.dev/contexts/",
+  data["@type"] = "pageReport"
   data.originalUrl = url;
   data.url = page.url(),
   data.accessibility = result[0];
@@ -680,16 +629,11 @@ const saveHtmlToFile = async(dir, filename, htmlContent) => {
     }
 }
 
-
-const url = /*'http://www.dksfbgsfdgkjfksddk.com';*/ /*"https://moodle.ciencias.ulisboa.pt/dasdd";*/ 'https://www.amazon.co.uk/';
-
-(async () => {
-
+const runUrlMode = async () => {
   const browser = await puppeteer.launch({
     headless: 'chrome',
     ignoreHTTPSErrors: true,
     acceptInsecureCerts: true,
-    
     args: [
         '--single-process',
         '--no-sandbox',
@@ -698,26 +642,66 @@ const url = /*'http://www.dksfbgsfdgkjfksddk.com';*/ /*"https://moodle.ciencias.
         '--ignore-certificate-errors',
         '--allow-running-insecure-content',
         '--disable-web-security',
-        '--user-data-dir=/tmp/chromium'
     ]
   });
-    
-  var websites = await readWebsiteCSV('website.csv');
-  var splittedWebsites = sliceIntoChunks(websites, chunkSize);
 
-  for(let websitesL of splittedWebsites) {
-    var start = new Date()
-    //await BatchGenerateReport(websitesL);
-    await analyseDomain(websitesL[0].Domain, browser);
-    
-
-    var end = new Date() - start;
-    console.info('Execution time: %dms', end) 
-  
+  const url = process.env.URL;
+  if(url == null) {
+    console.log("No URL provided");
+    return;
   }
 
+  var start = new Date()
+  await analyseDomain(url, browser);
+  var end = new Date() - start;
+  console.info('Execution time: %dms', end) 
   browser.close();
-  
+}
+
+const runCsvMode = async () => {
+  const browser = await puppeteer.launch({
+    headless: 'chrome',
+    ignoreHTTPSErrors: true,
+    acceptInsecureCerts: true,
+    args: [
+        '--single-process',
+        '--no-sandbox',
+        '--no-zygote',
+        '--disable-gpu',
+        '--ignore-certificate-errors',
+        '--allow-running-insecure-content',
+        '--disable-web-security',
+    ]
+  });
+  const csvPath = process.env.CSVFILEPATH;
+  if(csvPath == null) {
+    console.log("No CSV file path provided");
+    return;
+  }
+
+  const websites = await readWebsiteCSV(csvPath);
+  for(let website of websites) {
+    var start = new Date()
+    await analyseDomain(website.Domain, browser);
+    var end = new Date() - start;
+    console.info('Execution time: %dms', end) 
+  }
+  browser.close();
+}
+
+const runServer = async () => {
+
+}
+
+(async () => {
+
+  if(process.env.MODE == "url") {
+    await runUrlMode();
+  } else if(process.env.MODE == "csv") {
+    await runCsvMode();
+  } else if(process.env.MODE == "server") {
+    await runServer();
+  }
 
 })();
 
