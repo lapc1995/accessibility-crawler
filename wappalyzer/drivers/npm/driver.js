@@ -621,12 +621,15 @@ class Site {
         }
       }
 
+      //TODO
       if (
         /*(this.responseReceived && request.isNavigationRequest()) ||*/
         request.frame() !== page.mainFrame() ||
+        request.resourceType() === 'image'
+        /*||
         !['document', ...(this.options.noScripts ? [] : ['script'])].includes(
           request.resourceType()
-        )
+        )*/
       ) {
         request.abort('blockedbyclient')
       } else {

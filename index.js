@@ -245,6 +245,10 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
 
   const page = await browser.newPage();
 
+  if(options.cookies) {
+    await page.setCookie(...options.cookies);
+  }
+
   if(options.phone) {
     const pixel5 = puppeteer.devices['Pixel 5'];
     await page.emulate(pixel5);
@@ -324,7 +328,13 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
     data.filename += "phone";
   }
 
-  await page.close();
+  if(!options.dontClosePage) {
+    await page.close();
+  } 
+ 
+  if(options.dontClosePage){
+    return {data, page};
+  }
 
   return data;
 }
@@ -546,6 +556,199 @@ const getReportForURL = async(url, browser) => {
 
 const forbiddenFilenameCharacters = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
+
+const delay = (delayInms) => {
+  return new Promise(resolve => setTimeout(resolve, delayInms));
+}
+
+const analyseECommerceDomain = async (url, browser) => {
+
+  console.log(url);
+
+  let dirname = url.replaceAll('https://','');
+  dirname = dirname.replaceAll('http://','');
+  if(dirname.slice(-1) == '/') {
+    dirname = dirname.slice(0, -1);
+  }
+
+  forbiddenFilenameCharacters.forEach((character) => {
+    dirname = dirname.replaceAll(character, "{");
+  });
+
+  dirname = `./data/${dirname}`;
+
+  if(!fs.existsSync(dirname)) {
+    fs.mkdirSync(dirname);
+  }
+  
+  const primarySite = await analyseECommerceSite(url, browser, true) ;
+
+  if(primarySite.error) {
+    console.log(primarySite.error);
+    return;
+  }
+
+  saveHtmlToFile(dirname, primarySite.data.filename, primarySite.data.html);
+  delete primarySite.data.html;
+  SaveReportToJSONFile(primarySite.data, dirname);
+
+  // get product page
+  let productPageUrl = url;
+  if(productPageUrl.slice(-1) == '/') {
+    productPageUrl = productPageUrl.slice(0, -1);
+  }
+
+  let foundPageLink = false;
+  for(let link of primarySite.data.alinks) {
+      if(link.href.includes('/product/') || link.href.includes('/products/')) {
+        productPageUrl += link.href;
+        foundPageLink = true;
+        break;
+      }
+  }
+
+  if(!foundPageLink) {
+    for(let link of primarySite.data.alinks) {
+      if(link.href.includes('/collection') || link.href.includes('/collections')) {
+        const pageLink = link.href;
+        await primarySite.page.goto(url + link.href);
+        //await primarySite.page.waitForNavigation();
+        const alinks = await getALinks(primarySite.page);
+        for(let link of alinks) {
+          var re = new RegExp(`${pageLink}\/.+`);
+          if(re.test(link.href)) {
+            productPageUrl = url + link.href;
+            foundPageLink = true;
+            break;
+          }
+        }
+        break
+      }
+    }
+  }
+
+  //TODO check other pages for product links
+
+  const result = await analyseECommerceSite(productPageUrl, browser, true);
+  saveHtmlToFile(dirname, result.data.filename, result.data.html);
+  delete result.data.html;
+  SaveReportToJSONFile(result.data, dirname);
+
+  //Get product into cart
+
+  //Set to one time purchase
+  const labels = await result.page.$$('label');
+  console.log("labels", labels.length);
+  for(let label of labels) {
+    let text = await result.page.evaluate(el => el.textContent, label);
+    text = text.replace(" ", '');
+    text = text.replace("-", '');
+    if(text.toLowerCase().includes('onetime')) {
+      const inputId = await result.page.evaluate(el => el.getAttribute("for"), label);
+      //const input = await result.page.$(`#${inputId}`);
+      await result.page.evaluate((inputId) => {
+        document.querySelector(`#${inputId}`).click();
+    }, inputId);
+      break;
+    }
+  }
+
+
+  let foundAddToCart = false;
+  const buttons = await result.page.$$('button');
+  for(let button of buttons) {
+    const text = await result.page.evaluate(el => el.textContent, button);
+    if(text.toLowerCase().includes('add to cart')) {
+      foundAddToCart = true;
+      await button.evaluate( button => button.click());
+      break;
+    }
+  }
+
+  if(!foundAddToCart) {
+    const divs = await result.page.$$('div');
+    for(let div of divs) {
+      const text = await result.page.evaluate(el => el.textContent, div);
+      if(text.toLowerCase().includes('add to cart') &  text.length < 20) {
+        foundAddToCart = true;
+        console.log(text);
+        await div.evaluate( div => div.click());
+        console.log('clicked');
+        break;
+      }
+    }
+  }
+
+  await delay(2000);
+  
+
+  await result.page.screenshot({
+    path: 'screenshot1.jpg'
+  });
+
+  const cookies = await result.page.cookies();
+  await result.page.close();
+
+  //go to cart
+  let cartUrl = url;
+  if(cartUrl.slice(-1) == '/') {
+    cartUrl = cartUrl.slice(0, -1);
+  }
+  cartUrl = url + 'cart';
+  const cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies);
+  saveHtmlToFile(dirname, cartResult.data.filename, cartResult.data.html);
+  delete cartResult.data.html;
+  SaveReportToJSONFile(cartResult.data, dirname);
+
+  await cartResult.page.screenshot({
+    path: 'screenshot2.jpg'
+  });
+  
+  //go to checkout
+  const cartButtons = await cartResult.page.$$('button');
+  console.log(cartButtons);
+  for(let button of cartButtons) {
+    let text = await cartResult.page.evaluate(el => el.textContent, button);
+    text = text.replaceAll('\n', '');
+    text = text.replaceAll(' ', '');
+    if(text.toLowerCase().includes('checkout')) {
+      await button.evaluate( button => button.click() );
+      break;
+    }
+    
+  }
+  await cartResult.page.waitForNavigation();
+  const checkoutUrl = cartResult.page.url();
+  cartResult.page.close();
+
+  //analyse checkout page
+  const checkoutResult = await analyseECommerceSite(checkoutUrl, browser, true, cookies);
+  saveHtmlToFile(dirname, checkoutResult.data.filename, checkoutResult.data.html);
+  delete checkoutResult.data.html;
+  SaveReportToJSONFile(checkoutResult.data, dirname);
+
+
+  await checkoutResult.page.screenshot({
+    path: 'screenshot3.jpg'
+  });
+
+  checkoutResult.page.close();
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
 const analyseDomain = async (url, browser) => {
 
   console.log(url);
@@ -590,6 +793,11 @@ const analyseDomain = async (url, browser) => {
 
 }
 
+
+const analyseECommerceSite = async (url, browser, dontClosePage, cookies = null) => {
+  return await getReportForURLParallel(url, browser, {technologyReport: true, dontClosePage, cookies}) 
+}
+
 const analysePrimarySite = async (url, browser) => {
   return await getReportForURLParallel(url, browser, {technologyReport: true}) 
 }
@@ -631,7 +839,7 @@ const saveHtmlToFile = async(dir, filename, htmlContent) => {
 
 const runUrlMode = async () => {
   const browser = await puppeteer.launch({
-    headless: 'chrome',
+    headless: false,//'chrome',
     ignoreHTTPSErrors: true,
     acceptInsecureCerts: true,
     args: [
@@ -652,7 +860,10 @@ const runUrlMode = async () => {
   }
 
   var start = new Date()
-  await analyseDomain(url, browser);
+  //await analyseDomain(url, browser);
+  
+  await analyseECommerceDomain(url, browser);
+  
   var end = new Date() - start;
   console.info('Execution time: %dms', end) 
   browser.close();
