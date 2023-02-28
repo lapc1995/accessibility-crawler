@@ -601,9 +601,16 @@ const analyseECommerceDomain = async (url, browser) => {
   let foundPageLink = false;
   for(let link of primarySite.data.alinks) {
       if(link.href.includes('/product/') || link.href.includes('/products/')) {
-        productPageUrl += link.href;
-        foundPageLink = true;
-        break;
+        const tempPage = await browser.newPage();
+        await tempPage.goto(url + link.href);
+        //await tempPage.waitForNavigation();
+        const isProductPage = await checkIfPageIsIsProduct(tempPage);
+        tempPage.close();
+        if(isProductPage) {
+          productPageUrl += link.href;
+          foundPageLink = true;
+          break;
+        }
       }
   }
 
@@ -613,19 +620,79 @@ const analyseECommerceDomain = async (url, browser) => {
         const pageLink = link.href;
         await primarySite.page.goto(url + link.href);
         //await primarySite.page.waitForNavigation();
-        const alinks = await getALinks(primarySite.page);
-        for(let link of alinks) {
-          var re = new RegExp(`${pageLink}\/.+`);
-          if(re.test(link.href)) {
-            productPageUrl = url + link.href;
-            foundPageLink = true;
-            break;
+
+        let isProductPage = await checkIfPageIsIsProduct(primarySite.page);
+        console.log(isProductPage)
+        if(isProductPage) {
+          productPageUrl += link.href;
+          foundPageLink = true;
+          break;
+        } else {
+          const alinks = await getALinks(primarySite.page);
+          for(let link of alinks) {
+            var re = new RegExp(`${pageLink}\/.+`);
+            if(re.test(link.href)) {
+              const tempPage = await browser.newPage();
+              await tempPage.setViewport({
+                width: 1920,
+                height: 1080,
+                deviceScaleFactor: 1,
+              });
+              await tempPage.goto(url + link.href);
+              //await tempPage.waitForNavigation();
+              const isProductPage = await checkIfPageIsIsProduct(tempPage);
+              tempPage.close();
+              if(isProductPage) {
+                productPageUrl = url + link.href;
+                foundPageLink = true;
+                break;
+              }
+            }
           }
         }
-        break
+      }
+      if(foundPageLink) {
+        break;
       }
     }
   }
+
+  //look at shop
+  if(!foundPageLink) {
+    let shopLinks = primarySite.data.alinks.filter((link) => link.href.includes('/shop/') );
+    shopLinks = removeDuplicateLinks(shopLinks);
+    for(let shopLink of shopLinks) {
+      var re = new RegExp(`\/shop\/.+`);
+      if(!re.test(shopLink.href)) {
+        continue;
+      }
+      const tempPage = await browser.newPage();
+      await tempPage.setViewport({
+        width: 1920,
+        height: 1080,
+        deviceScaleFactor: 1,
+      });
+
+      let pageLink = shopLink.href.includes('http') ? shopLink.href : url + shopLink.href;
+      await tempPage.goto(pageLink);
+      //await tempPage.waitForNavigation();
+      const isProductPage = await checkIfPageIsIsProduct(tempPage);
+      tempPage.close();
+      if(isProductPage) {
+        productPageUrl = pageLink;
+        foundPageLink = true;
+        break;
+      }
+    }
+  }
+
+
+  //go to collects page
+
+
+
+
+  //primarySite.page.close(); ???????
 
   //TODO check other pages for product links
 
@@ -694,7 +761,7 @@ const analyseECommerceDomain = async (url, browser) => {
   if(cartUrl.slice(-1) == '/') {
     cartUrl = cartUrl.slice(0, -1);
   }
-  cartUrl = url + 'cart';
+  cartUrl = cartUrl + '/cart';
   const cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies);
   saveHtmlToFile(dirname, cartResult.data.filename, cartResult.data.html);
   delete cartResult.data.html;
@@ -705,20 +772,152 @@ const analyseECommerceDomain = async (url, browser) => {
   });
   
   //go to checkout
+  let foundCheckoutButton = false;
+  let checkoutUrl = null;
   const cartButtons = await cartResult.page.$$('button');
-  console.log(cartButtons);
+  let checkOutButtons = [];
   for(let button of cartButtons) {
     let text = await cartResult.page.evaluate(el => el.textContent, button);
     text = text.replaceAll('\n', '');
     text = text.replaceAll(' ', '');
     if(text.toLowerCase().includes('checkout')) {
-      await button.evaluate( button => button.click() );
-      break;
+      checkOutButtons.push(button);
     }
-    
   }
-  await cartResult.page.waitForNavigation();
-  const checkoutUrl = cartResult.page.url();
+
+ 
+  for(let i = 0; i < checkOutButtons.length; i++) {
+    let tempPage = await browser.newPage();
+    await tempPage.goto(cartUrl);
+    const cartTextButtons = await tempPage.$$('button');
+    let checkOutButtons = [];
+    for(let button of cartTextButtons) {
+      let text = await tempPage.evaluate(el => el.textContent, button);
+      text = text.replaceAll('\n', '');
+      text = text.replaceAll(' ', '');
+      if(text.toLowerCase().includes('checkout')) {
+        checkOutButtons.push(button);
+      }
+    }
+
+
+
+    let text = await tempPage.evaluate(el => el.textContent, checkOutButtons[i]);
+    if(text.toLowerCase().includes('checkout')) {
+      await checkOutButtons[i].evaluate(button => button.click());
+
+      await tempPage.waitForNavigation();
+      const checkoutUrlTemp = tempPage.url();
+
+      await tempPage.close();
+
+      if(checkoutUrlTemp != cartUrl) {
+        checkoutUrl = checkoutUrlTemp;
+        foundCheckoutButton = true;
+        break;
+      }
+    
+    }else {
+      await tempPage.close();
+    }
+
+
+  }
+  
+/*
+
+  for(let button of cartButtons) {
+    let text = await cartResult.page.evaluate(el => el.textContent, button);
+    text = text.replaceAll('\n', '');
+    text = text.replaceAll(' ', '');
+    if(text.toLowerCase().includes('checkout')) {
+      await button.evaluate(button => button.click() );
+
+      await cartResult.page.waitForNavigation();
+      const checkoutUrlTemp = cartResult.page.url();
+
+      if(!checkoutUrlTemp == cartUrl) {
+        await cartResult.page.goBack();
+        checkoutUrl = checkoutUrlTemp;
+        foundCheckoutButton = true;
+        break;
+      }
+    }
+  }*/
+
+  if(!foundCheckoutButton) {
+    const cartInputs = await cartResult.page.$$('input');
+    for(let input of cartInputs) {
+      let text = await cartResult.page.evaluate(el => el.value, input);
+      text = text.replaceAll('\n', '');
+      text = text.replaceAll(' ', '');
+      if(text.toLowerCase().includes('checkout')) {
+        await input.evaluate(input => input.click() );
+
+        await cartResult.page.waitForNavigation();
+        const checkoutUrlTemp = cartResult.page.url();
+
+        if(checkoutUrlTemp != cartUrl) {
+          checkoutUrl = checkoutUrlTemp;
+          foundCheckoutButton = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if(!foundCheckoutButton) {
+    const cartAs = await cartResult.page.$$('a');
+    for(let a of cartAs) {
+      let text = await cartResult.page.evaluate(el => el.textContent, a);
+      text = text.replaceAll('\n', '');
+      text = text.replaceAll(' ', '');
+      let href = await cartResult.page.evaluate(el => el.href, a);
+      if(href == cartUrl || !text.toLowerCase().includes('checkout')) {
+        continue;
+      }
+      await a.evaluate( a => a.click() );
+
+      await cartResult.page.waitForNavigation();
+      const checkoutUrlTemp = cartResult.page.url();
+
+      if(checkoutUrlTemp != cartUrl) {
+        checkoutUrl = checkoutUrlTemp;
+        foundCheckoutButton = true;
+        break;
+      }
+    }
+  }
+
+  if(!foundCheckoutButton) {
+    const cartDivs = await cartResult.page.$$('div');
+    for(let div of cartDivs) {
+      let text = await cartResult.page.evaluate(el => el.textContent, div);
+      text = text.replaceAll('\n', '');
+      text = text.replaceAll(' ', '');
+      if(text.toLowerCase().includes('checkout')) {
+        await div.evaluate( div => div.click() );
+        await cartResult.page.waitForNavigation();
+        const checkoutUrlTemp = cartResult.page.url();
+
+        if(!checkoutUrlTemp == cartUrl) {
+          checkoutUrl = checkoutUrlTemp;
+          foundCheckoutButton = true;
+          break;
+        }
+      }
+    }
+  }
+
+
+
+  if(!foundCheckoutButton) {
+    console.log('No checkout button found');
+    return;
+  }
+
+  //await cartResult.page.waitForNavigation();
+  //const checkoutUrl = cartResult.page.url();
   cartResult.page.close();
 
   //analyse checkout page
@@ -917,3 +1116,81 @@ const runServer = async () => {
 })();
 
 
+
+
+
+const checkIfPageIsIsProduct = async (page) => {
+   //Set to one time purchase
+   const labels = await page.$$('label');
+   console.log("labels", labels.length);
+   for(let label of labels) {
+     let text = await page.evaluate(el => el.textContent, label);
+     text = text.replace(" ", '');
+     text = text.replace("-", '');
+     if(text.toLowerCase().includes('onetime')) {
+       const inputId = await page.evaluate(el => el.getAttribute("for"), label);
+       await page.evaluate((inputId) => {
+         document.querySelector(`#${inputId}`).click();
+     }, inputId);
+       break;
+     }
+   }
+ 
+ 
+   const buttons = await page.$$('button');
+   for(let button of buttons) {
+
+    const element_is_visible = await page.evaluate((button) => {
+      const style = window.getComputedStyle(button);
+      const rect = button.getBoundingClientRect();
+      //return {visibility: style.getPropertyValue('visibility'), display: style.getPropertyValue('display'), opacity: style.getPropertyValue('opacity'), height: style.getPropertyValue('height'), width: style.getPropertyValue('width'), bottomr: rect.bottom, topr: rect.top, heightr: rect.height, widthr: rect.width};
+      return style.getPropertyValue('visibility') != 'hidden' && style.getPropertyValue('display') != 'none' && style.getPropertyValue('opacity') != '0' && style.getPropertyValue('height') != '0px' && style.getPropertyValue('width') != '0px' && rect.bottom != 0 && rect.top != 0 && rect.height != 0 && rect.width != 0;
+    }, button);
+    
+    if(!element_is_visible) {
+      continue;
+    }
+
+     const text = await page.evaluate(el => el.textContent, button);
+     if(text.toLowerCase().includes('add to cart')) {
+        return true;
+     }
+   }
+ 
+
+    const divs = await page.$$('div');
+    for(let div of divs) {
+
+      const element_is_visible = await page.evaluate((div) => {
+        const style = window.getComputedStyle(div);
+        //const rect = div.getBoundingClientRect();
+        return style.getPropertyValue('visibility') != 'hidden' && style.getPropertyValue('display') != 'none' && style.getPropertyValue('opacity') != '0' && style.getPropertyValue('height') != '0px' && style.getPropertyValue('width') != '0px' /*&& !!(rect.bottom || rect.top || rect.height || rect.width)*/;
+      }, div);
+      
+      if(!element_is_visible) {
+        continue;
+      }
+
+      const text = await page.evaluate(el => el.textContent, div);
+      if(text.toLowerCase().includes('add to cart') &  text.length < 20) {
+      return true;
+      }
+    }
+   
+
+   return false;
+
+}
+
+const removeDuplicateLinks = (alinks) => {
+
+  const links = [];
+  for(let link of alinks) {
+    let filtred = links.filter(l => l.href == link.href);
+    if(filtred.length == 0) {
+      links.push(link);
+    }
+  }
+  return links;
+
+}
