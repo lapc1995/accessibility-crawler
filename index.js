@@ -1070,8 +1070,9 @@ const runUrlMode = async () => {
   var start = new Date()
   //await analyseDomain(url, browser);
   
-  await analyseECommerceDomain(url, browser);
-  
+  //await analyseECommerceDomain(url, browser);
+  await analyseDomain(url, browser);
+
   var end = new Date() - start;
   console.info('Execution time: %dms', end) 
   browser.close();
