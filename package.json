@@ -20,10 +20,13 @@
     "express": "^4.18.2",
     "jsonfile": "^6.1.0",
     "node-fetch": "^3.2.10",
+    "node-json-db": "^2.1.4",
     "ora": "^6.1.2",
+    "parse": "^4.0.1",
     "puppeteer": "^18.2.1",
     "wappalyzer": "^6.10.45",
-    "wappalyzer-core": "^6.10.47"
+    "wappalyzer-core": "^6.10.47",
+    "winston": "^3.8.2"
   },
   "devDependencies": {
     "axe-core": "^4.5.1"
