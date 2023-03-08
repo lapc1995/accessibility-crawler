@@ -561,9 +561,27 @@ const delay = (delayInms) => {
   return new Promise(resolve => setTimeout(resolve, delayInms));
 }
 
+const fixLink = (link, url) => {
+  link = link.trim();
+  url = url.trim();
+  if(link.includes('http')) {
+    return link;
+  } else {
+    if(url.slice(-1) == '/') {
+      url = url.slice(0, -1);
+    }
+    url += link;
+    return url;
+  }
+}
+
 const analyseECommerceDomain = async (url, browser) => {
 
   console.log(url);
+
+  if(!url.includes('http')) {
+    url = `https://${url}`;
+  }
 
   let dirname = url.replaceAll('https://','');
   dirname = dirname.replaceAll('http://','');
@@ -579,6 +597,9 @@ const analyseECommerceDomain = async (url, browser) => {
 
   if(!fs.existsSync(dirname)) {
     fs.mkdirSync(dirname);
+  } else {
+    //console.log("Directory already exists => " + dirname);
+    //return;
   }
   
   const primarySite = await analyseECommerceSite(url, browser, true) ;
@@ -592,6 +613,25 @@ const analyseECommerceDomain = async (url, browser) => {
   delete primarySite.data.html;
   SaveReportToJSONFile(primarySite.data, dirname);
 
+  //get terms and condictions page
+  let termsOfServicePageUrl;
+  let foundTermsOfServicePageLink = false;
+  for(let link of primarySite.data.alinks) {
+      if(link.href.includes('terms-and-conditions') || link.href.includes('terms-conditions') || link.href.includes('termsandconditions') || link.href.includes('termsconditions') || link.href.includes('terms') || link.href.includes('conditions')) {
+        foundTermsOfServicePageLink = true;
+        termsOfServicePageUrl = fixLink(link.href, url);
+        break;
+      }
+  }
+  if(foundTermsOfServicePageLink) {
+    const resultTerms = await analyseECommerceSite(termsOfServicePageUrl, browser, true);
+    saveHtmlToFile(dirname, resultTerms.data.filename, resultTerms.data.html);
+    delete resultTerms.data.html;
+    SaveReportToJSONFile(resultTerms.data, dirname);
+  }
+
+  
+
   // get product page
   let productPageUrl = url;
   if(productPageUrl.slice(-1) == '/') {
@@ -600,14 +640,15 @@ const analyseECommerceDomain = async (url, browser) => {
 
   let foundPageLink = false;
   for(let link of primarySite.data.alinks) {
-      if(link.href.includes('/product/') || link.href.includes('/products/')) {
+      if((link.href.includes('/product/') || link.href.includes('/products/')) && !link.href.includes('gift')) {
         const tempPage = await browser.newPage();
-        await tempPage.goto(url + link.href);
+        const tempLink = fixLink(link.href, url);
+        await tempPage.goto(tempLink);
         //await tempPage.waitForNavigation();
         const isProductPage = await checkIfPageIsIsProduct(tempPage);
         tempPage.close();
         if(isProductPage) {
-          productPageUrl += link.href;
+          productPageUrl = tempLink;
           foundPageLink = true;
           break;
         }
@@ -616,15 +657,16 @@ const analyseECommerceDomain = async (url, browser) => {
 
   if(!foundPageLink) {
     for(let link of primarySite.data.alinks) {
-      if(link.href.includes('/collection') || link.href.includes('/collections')) {
+      if((link.href.includes('/collection') || link.href.includes('/collections'))  && !link.href.includes('gift')) {
         const pageLink = link.href;
-        await primarySite.page.goto(url + link.href);
+        const tempLink = fixLink(link.href, url);
+        await primarySite.page.goto(tempLink);
         //await primarySite.page.waitForNavigation();
 
         let isProductPage = await checkIfPageIsIsProduct(primarySite.page);
         console.log(isProductPage)
         if(isProductPage) {
-          productPageUrl += link.href;
+          productPageUrl = tempLink;
           foundPageLink = true;
           break;
         } else {
@@ -638,12 +680,13 @@ const analyseECommerceDomain = async (url, browser) => {
                 height: 1080,
                 deviceScaleFactor: 1,
               });
-              await tempPage.goto(url + link.href);
+              const tempLink2 = fixLink(link.href, url);
+              await tempPage.goto(tempLink2);
               //await tempPage.waitForNavigation();
               const isProductPage = await checkIfPageIsIsProduct(tempPage);
               tempPage.close();
               if(isProductPage) {
-                productPageUrl = url + link.href;
+                productPageUrl = tempLink2;
                 foundPageLink = true;
                 break;
               }
@@ -673,7 +716,7 @@ const analyseECommerceDomain = async (url, browser) => {
         deviceScaleFactor: 1,
       });
 
-      let pageLink = shopLink.href.includes('http') ? shopLink.href : url + shopLink.href;
+      let pageLink = fixLink(shopLink.href, url);
       await tempPage.goto(pageLink);
       //await tempPage.waitForNavigation();
       const isProductPage = await checkIfPageIsIsProduct(tempPage);
@@ -701,6 +744,7 @@ const analyseECommerceDomain = async (url, browser) => {
   delete result.data.html;
   SaveReportToJSONFile(result.data, dirname);
 
+  
   //Get product into cart
 
   //Set to one time purchase
@@ -720,12 +764,24 @@ const analyseECommerceDomain = async (url, browser) => {
     }
   }
 
+  //Select size
+  const divs2 = await result.page.$$('span');
+    for(let div of divs2) {
+      const text = await result.page.evaluate(el => el.textContent, div);
+      if(/^\d+$/.test(text.trim()) && text.trim() != '0') {
+        console.log(text);
+        await div.evaluate( div => div.click());
+        console.log('clicked');
+        break;
+      }
+
+    }
 
   let foundAddToCart = false;
   const buttons = await result.page.$$('button');
   for(let button of buttons) {
     const text = await result.page.evaluate(el => el.textContent, button);
-    if(text.toLowerCase().includes('add to cart')) {
+    if(checkAddToCartText(text)) {
       foundAddToCart = true;
       await button.evaluate( button => button.click());
       break;
@@ -736,7 +792,7 @@ const analyseECommerceDomain = async (url, browser) => {
     const divs = await result.page.$$('div');
     for(let div of divs) {
       const text = await result.page.evaluate(el => el.textContent, div);
-      if(text.toLowerCase().includes('add to cart') &  text.length < 20) {
+      if(checkAddToCartText(text) &&  text.length < 20) {
         foundAddToCart = true;
         console.log(text);
         await div.evaluate( div => div.click());
@@ -746,7 +802,21 @@ const analyseECommerceDomain = async (url, browser) => {
     }
   }
 
-  await delay(2000);
+  if(!foundAddToCart) {
+    const spans = await result.page.$$('span');
+    for(let span of spans) {
+      let text = await result.page.evaluate(el => el.textContent, span);
+      if((checkAddToCartText(text)) &  text.length < 20) {
+        foundAddToCart = true;
+        await span.evaluate( span => span.click());
+        console.log('clicked');
+        break
+      }
+    }
+  }
+ 
+
+  await delay(5000);
   
 
   await result.page.screenshot({
@@ -788,7 +858,16 @@ const analyseECommerceDomain = async (url, browser) => {
  
   for(let i = 0; i < checkOutButtons.length; i++) {
     let tempPage = await browser.newPage();
+    await tempPage.setViewport({
+      width: 1920,
+      height:1080,
+      deviceScaleFactor: 1,
+    });
+
     await tempPage.goto(cartUrl);
+
+    await delay(5000);
+
     const cartTextButtons = await tempPage.$$('button');
     let checkOutButtons = [];
     for(let button of cartTextButtons) {
@@ -800,11 +879,16 @@ const analyseECommerceDomain = async (url, browser) => {
       }
     }
 
-
-
     let text = await tempPage.evaluate(el => el.textContent, checkOutButtons[i]);
+    text = text.replaceAll('\n', '');
+    text = text.replaceAll(' ', '');
     if(text.toLowerCase().includes('checkout')) {
-      await checkOutButtons[i].evaluate(button => button.click());
+
+      //check if type is submit
+      //const type = await tempPage.evaluate(el => el.getAttribute('type'), checkOutButtons[i]);
+        await tempPage.evaluate((button) => {button.click();}, checkOutButtons[i]);
+     
+      //await checkOutButtons[i].evaluate(button => button.click());
 
       await tempPage.waitForNavigation();
       const checkoutUrlTemp = tempPage.url();
@@ -1089,10 +1173,36 @@ const runCsvMode = async () => {
     return;
   }
 
+  if(!fs.existsSync("./error")) {
+    fs.mkdirSync("./error");
+  }
+
+
   const websites = await readWebsiteCSV(csvPath);
   for(let website of websites) {
     var start = new Date()
-    await analyseDomain(website.Domain, browser);
+    //await analyseDomain(website.Domain, browser);
+
+    let urlSplit = website.Domain.split(";");
+    let selectedUrl = urlSplit[0];
+    let selectedUrls = urlSplit.filter((url) => url.startsWith("shop") || url.startsWith("store"));
+    if(selectedUrls.length > 0) {
+      selectedUrl = selectedUrls[0];
+    }
+
+    selectedUrl = selectedUrl.replaceAll("*", "");
+
+    try {
+      await analyseECommerceDomain(urlSplit[0], browser);
+    }catch(e) {
+      console.log("Error", e);
+     
+      var filename = urlSplit[0].replaceAll('https://','');
+      e.filename = filename;
+      SaveReportToJSONFile(e, "./error/");
+      
+    }
+   
     var end = new Date() - start;
     console.info('Execution time: %dms', end) 
   }
@@ -1115,8 +1225,20 @@ const runServer = async () => {
 
 })();
 
-
-
+const checkAddToCartText = (text) => {
+  text = text.replaceAll(" ", '');
+  text = text.replaceAll("-", '');
+  text = text.replaceAll(":", '');
+  text = text.replaceAll("\n", '');
+  text = text.toLowerCase();
+if(text == '') {
+    return false;
+}
+if(text.includes('addtocart') || text.includes('addtobag') || text.includes('addtobasket')) {
+    return true;
+}
+return false;
+}
 
 
 const checkIfPageIsIsProduct = async (page) => {
@@ -1152,7 +1274,7 @@ const checkIfPageIsIsProduct = async (page) => {
     }
 
      const text = await page.evaluate(el => el.textContent, button);
-     if(text.toLowerCase().includes('add to cart')) {
+     if(checkAddToCartText(text)) {
         return true;
      }
    }
@@ -1172,7 +1294,26 @@ const checkIfPageIsIsProduct = async (page) => {
       }
 
       const text = await page.evaluate(el => el.textContent, div);
-      if(text.toLowerCase().includes('add to cart') &  text.length < 20) {
+      if((checkAddToCartText(text)) &  text.length < 20) {
+      return true;
+      }
+    }
+
+
+    const spans = await page.$$('span');
+    for(let span of spans) {
+      const element_is_visible = await page.evaluate((span) => {
+        const style = window.getComputedStyle(span);
+        //const rect = div.getBoundingClientRect();
+        return style.getPropertyValue('visibility') != 'hidden' && style.getPropertyValue('display') != 'none' && style.getPropertyValue('opacity') != '0' && style.getPropertyValue('height') != '0px' && style.getPropertyValue('width') != '0px' /*&& !!(rect.bottom || rect.top || rect.height || rect.width)*/;
+      }, span);
+      
+      if(!element_is_visible) {
+        continue;
+      }
+
+      let text = await page.evaluate(el => el.textContent, span);
+      if((checkAddToCartText(text)) &  text.length < 20) {
       return true;
       }
     }
