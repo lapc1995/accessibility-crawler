@@ -8,6 +8,10 @@ import fetch from 'node-fetch';
 import { response } from 'express';
 import csvParser from 'csv-parser';
 
+import Parse from 'parse/node.js';
+
+import os from 'os';
+
 import * as dotenv from 'dotenv'
 dotenv.config()
 
@@ -18,6 +22,11 @@ import archiver from 'archiver';
 
 import Wappalyzer from './wappalyzer/drivers/npm/driver.js'
 
+import { JsonDB, Config } from 'node-json-db';
+
+import * as winston from 'winston';
+
+import YourCustomTransport from './serverTransports.js';
 
 let chunkSize = 5;
 
@@ -1145,8 +1154,9 @@ const runUrlMode = async () => {
   var start = new Date()
   //await analyseDomain(url, browser);
   
-  await analyseECommerceDomain(url, browser);
-  
+  //await analyseECommerceDomain(url, browser);
+  await analyseDomain(url, browser);
+
   var end = new Date() - start;
   console.info('Execution time: %dms', end) 
   browser.close();
@@ -1211,6 +1221,71 @@ const runCsvMode = async () => {
 
 const runServer = async () => {
 
+  Parse.initialize(process.env.APP_ID, "", process.env.MASTER_KEY);
+  Parse.masterKey = process.env.MASTER_KEY;
+  Parse.serverURL = process.env.SERVER_URL;
+
+  const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    ),
+    defaultMeta: { service: 'user-service' },
+    transports: [
+      new winston.transports.File({ filename: 'error.log', level: 'error' }),
+      new winston.transports.File({ filename: 'combined.log' }),
+      new winston.transports.Console({format: winston.format.simple(),}),
+      new YourCustomTransport(),
+    ],
+  });
+
+  logger.log({level: 'info',message: 'Hello distributed log files!', website: "test", machine: "test"});
+
+  var db = new JsonDB(new Config("crawldb", true, true, '/'));
+
+  let toBeAnalysed;
+  try {
+    toBeAnalysed = await db.getData('/toBeAnalysed');
+  } catch (error) {
+    toBeAnalysed = [];
+  }
+
+  if(toBeAnalysed.length == 0) {
+    const ip = getMachineIp();
+    const batch = await Parse.Cloud.run("getWebsiteBatch", {ip});
+    for(let website of batch) {
+      await db.push("/toBeAnalysed[]", website);
+      const processingOrder = await getProcessingOrder(website.processingOrderId);
+      processingOrder.set("status", "saved on client");
+      await processingOrder.save(null, { useMasterKey: true });
+    }
+  }
+  
+  toBeAnalysed = await db.getData('/toBeAnalysed');
+  for(let website of toBeAnalysed) {
+    const processing = await getProcessingOrder(website.processingOrderId);
+    processing.set("status", "processing");
+    await processing.save(null, { useMasterKey: true });
+    
+    //await analyseDomain(website.Domain, browser);
+    await delay(10000);
+
+    processing.set("status", "processed");
+    await processing.save(null, { useMasterKey: true });
+
+    const index = await db.getIndex("/toBeAnalysed", website.objectId, "objectId");
+    console.log("index", index);
+    await db.delete("/toBeAnalysed[" + index + "]");
+    await db.push("/analysed[]", website);
+
+    //check time
+
+    //add if it is weekday or weekend
+    if(new Date().getHours() > 8 && new Date().getHours() < 21) {
+      break;
+    }
+  }
 }
 
 (async () => {
@@ -1220,11 +1295,27 @@ const runServer = async () => {
   } else if(process.env.MODE == "csv") {
     await runCsvMode();
   } else if(process.env.MODE == "server") {
-    await runServer();
+    runServer();
   }
 
 })();
 
+const getMachineIp = () => {
+  const nets = os.networkInterfaces();
+  const results = {};
+  for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+          // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+          // 'IPv4' is in Node <= 17, from 18 it's a number 4 or 6
+          const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4
+          if (net.family === familyV4Value && !net.internal) {
+              if (!results[name]) {
+                  results[name] = [];
+              }
+              results[name].push(net.address);
+          }
+      }
+  }
 const checkAddToCartText = (text) => {
   text = text.replaceAll(" ", '');
   text = text.replaceAll("-", '');
@@ -1239,6 +1330,16 @@ if(text.includes('addtocart') || text.includes('addtobag') || text.includes('add
 }
 return false;
 }
+
+  if(results["eth0"] != null && results["eth0"].length > 0) {
+    return results["eth0"][0];
+  } else if(results["en0"] != null && results["en0"].length > 0) {
+    return results["en0"][0];
+  }
+
+  return null;
+}
+
 
 
 const checkIfPageIsIsProduct = async (page) => {
@@ -1334,4 +1435,14 @@ const removeDuplicateLinks = (alinks) => {
   }
   return links;
 
+}
+
+const getProcessingOrder = async (id) => {
+  const ProcessingOrder = Parse.Object.extend("ProcessingOrder");
+  const query = new Parse.Query(ProcessingOrder);
+  const processingOrder = await query.get(id);
+  return processingOrder;
+}
+
+const sendDataToAmazonBucket = async (data, website) => {
 }
