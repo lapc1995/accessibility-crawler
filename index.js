@@ -209,6 +209,9 @@ const generateFilename = (url, date) => {
 
 const getReportForURLParallel = async(url, browser, options = {}) => {
 
+  try {
+
+
   const wappalyzerOptions = {
     debug: true,
     delay: 500,
@@ -285,6 +288,11 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   let gotoResponse = null;
   try {
     gotoResponse = await page.goto(url, { waitUntil: ['networkidle0'] });
+    status = `${gotoResponse.status()}`;
+    if(status.charAt(0) == "4" || status.charAt(0) == "5") {
+      return {url, error: status, filename: generateFilename(url, Date.now()) };
+    }
+
   } catch(e) {
     return {url, error: e.message, filename: generateFilename(url, Date.now()) };
   }
@@ -346,6 +354,13 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   }
 
   return data;
+
+} catch(e) {
+  console.log(e);
+  return {url, error: e.message, filename: generateFilename(url, Date.now()) };    
+}
+
+
 }
 
 const cleanTechnologyReport = (technologyReport) => {
@@ -586,6 +601,14 @@ const fixLink = (link, url) => {
 
 const analyseECommerceDomain = async (url, browser) => {
 
+  let report = {
+    main: null,
+    terms: null,
+    product: null,
+    cart: null,
+    checkout: null,
+  };
+
   console.log(url);
 
   if(!url.includes('http')) {
@@ -612,15 +635,22 @@ const analyseECommerceDomain = async (url, browser) => {
   }
   
   const primarySite = await analyseECommerceSite(url, browser, true) ;
-
   if(primarySite.error) {
-    console.log(primarySite.error);
+    SaveReportToJSONFile(primarySite, "./error");
+    report.main ={
+      error: primarySite.error,
+      url
+    }
     return;
   }
 
   saveHtmlToFile(dirname, primarySite.data.filename, primarySite.data.html);
   delete primarySite.data.html;
   SaveReportToJSONFile(primarySite.data, dirname);
+  report.main = {
+    url: primarySite.data.url,
+    filename: primarySite.data.filename
+  }
 
   //get terms and condictions page
   let termsOfServicePageUrl;
@@ -637,6 +667,11 @@ const analyseECommerceDomain = async (url, browser) => {
     saveHtmlToFile(dirname, resultTerms.data.filename, resultTerms.data.html);
     delete resultTerms.data.html;
     SaveReportToJSONFile(resultTerms.data, dirname);
+    await resultTerms.page.close();
+    report.terms = {
+      url: resultTerms.data.url,
+      filename: resultTerms.data.filename
+    }
   }
 
   
@@ -738,6 +773,35 @@ const analyseECommerceDomain = async (url, browser) => {
     }
   }
 
+  console.log("didn't find product page link, testing all links")
+  if(!foundPageLink) {
+    let noRepeatLinks = removeDuplicateLinks(primarySite.data.alinks);
+    noRepeatLinks = noRepeatLinks.sort((a, b) => (a.href.length > b.href.length) ? -1 : 1);
+    noRepeatLinks = noRepeatLinks.filter((link) => {
+      const tempLink = fixLink(link.href, url);
+      const count = (tempLink.match(/\//g) || []).length;
+      return (!tempLink.includes('gift') && tempLink.includes(url) && count == 3) 
+    });
+    for(let link of noRepeatLinks) {
+      const tempLink = fixLink(link.href, url);
+      const count = (tempLink.match(/\//g) || []).length;
+      if(!tempLink.includes('gift') && tempLink.includes(url) && count == 3) {
+        const tempPage = await browser.newPage();
+        await tempPage.goto(tempLink);
+        const isProductPage = await checkIfPageIsIsProduct(tempPage);
+        tempPage.close();
+        if(isProductPage) {
+          productPageUrl = tempLink;
+          foundPageLink = true;
+          break;
+        } else {
+          await delay(2000);
+        }
+      }
+    }
+  }
+
+
 
   //go to collects page
 
@@ -748,11 +812,24 @@ const analyseECommerceDomain = async (url, browser) => {
 
   //TODO check other pages for product links
 
-  const result = await analyseECommerceSite(productPageUrl, browser, true);
-  saveHtmlToFile(dirname, result.data.filename, result.data.html);
-  delete result.data.html;
-  SaveReportToJSONFile(result.data, dirname);
-
+  if(foundPageLink) {
+    const result = await analyseECommerceSite(productPageUrl, browser, true);
+    if(result.error) {
+      SaveReportToJSONFile(result, './error');
+      report.product = {
+        url: productPageUrl,
+        error: result.error
+      }
+    } else {
+      saveHtmlToFile(dirname, result.data.filename, result.data.html);
+      delete result.data.html;
+      SaveReportToJSONFile(result.data, dirname);
+      report.product = {
+        url: result.data.url,
+        filename: result.data.filename
+      }
+    }
+  }
   
   //Get product into cart
 
@@ -841,10 +918,31 @@ const analyseECommerceDomain = async (url, browser) => {
     cartUrl = cartUrl.slice(0, -1);
   }
   cartUrl = cartUrl + '/cart';
-  const cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies);
-  saveHtmlToFile(dirname, cartResult.data.filename, cartResult.data.html);
-  delete cartResult.data.html;
-  SaveReportToJSONFile(cartResult.data, dirname);
+  let cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies);
+  if(cartResult.error){
+    if(cartResult.error == "404") {
+      var cartLinks = primarySite.data.alinks.filter((link) => (link.href.includes('/cart')));
+      if(cartLinks.length > 0) {
+        cartUrl = fixLink(cartLinks[0].href, url);
+        cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies);
+        if(cartResult.error) {
+          SaveReportToJSONFile(cartResult, "./error/");
+        } else {
+          saveHtmlToFile(dirname, cartResult.data.filename, cartResult.data.html);
+          delete cartResult.data.html;
+          SaveReportToJSONFile(cartResult.data, dirname);
+        }
+      } else {
+        SaveReportToJSONFile(cartResult, "./error/");
+      }
+    } else {
+      SaveReportToJSONFile(cartResult, "./error/");
+    }
+  } else {
+    saveHtmlToFile(dirname, cartResult.data.filename, cartResult.data.html);
+    delete cartResult.data.html;
+    SaveReportToJSONFile(cartResult.data, dirname);
+  }
 
   await cartResult.page.screenshot({
     path: 'screenshot2.jpg'
@@ -947,7 +1045,12 @@ const analyseECommerceDomain = async (url, browser) => {
       if(text.toLowerCase().includes('checkout')) {
         await input.evaluate(input => input.click() );
 
-        await cartResult.page.waitForNavigation();
+        try {
+          await cartResult.page.waitForNavigation();
+        } catch (error) {
+          console.log('No checkout button found');
+          return;
+        }
         const checkoutUrlTemp = cartResult.page.url();
 
         if(checkoutUrlTemp != cartUrl) {
@@ -971,7 +1074,13 @@ const analyseECommerceDomain = async (url, browser) => {
       }
       await a.evaluate( a => a.click() );
 
-      await cartResult.page.waitForNavigation();
+      try {
+        await cartResult.page.waitForNavigation();
+      } catch (error) {
+        console.log('No checkout button found');
+        return;
+      }
+    
       const checkoutUrlTemp = cartResult.page.url();
 
       if(checkoutUrlTemp != cartUrl) {
@@ -990,7 +1099,12 @@ const analyseECommerceDomain = async (url, browser) => {
       text = text.replaceAll(' ', '');
       if(text.toLowerCase().includes('checkout')) {
         await div.evaluate( div => div.click() );
-        await cartResult.page.waitForNavigation();
+        try {
+          await cartResult.page.waitForNavigation();
+        } catch (error) {
+          console.log('No checkout button found');
+          return;
+        }
         const checkoutUrlTemp = cartResult.page.url();
 
         if(!checkoutUrlTemp == cartUrl) {
@@ -1011,7 +1125,7 @@ const analyseECommerceDomain = async (url, browser) => {
 
   //await cartResult.page.waitForNavigation();
   //const checkoutUrl = cartResult.page.url();
-  cartResult.page.close();
+  await cartResult.page.close();
 
   //analyse checkout page
   const checkoutResult = await analyseECommerceSite(checkoutUrl, browser, true, cookies);
@@ -1024,7 +1138,7 @@ const analyseECommerceDomain = async (url, browser) => {
     path: 'screenshot3.jpg'
   });
 
-  checkoutResult.page.close();
+  await checkoutResult.page.close();
 
 
 
@@ -1154,8 +1268,8 @@ const runUrlMode = async () => {
   var start = new Date()
   //await analyseDomain(url, browser);
   
-  //await analyseECommerceDomain(url, browser);
-  await analyseDomain(url, browser);
+  await analyseECommerceDomain(url, browser);
+  //await analyseDomain(url, browser);
 
   var end = new Date() - start;
   console.info('Execution time: %dms', end) 
@@ -1316,6 +1430,16 @@ const getMachineIp = () => {
           }
       }
   }
+
+  if(results["eth0"] != null && results["eth0"].length > 0) {
+    return results["eth0"][0];
+  } else if(results["en0"] != null && results["en0"].length > 0) {
+    return results["en0"][0];
+  }
+
+  return null;
+}
+
 const checkAddToCartText = (text) => {
   text = text.replaceAll(" ", '');
   text = text.replaceAll("-", '');
@@ -1329,15 +1453,6 @@ if(text.includes('addtocart') || text.includes('addtobag') || text.includes('add
     return true;
 }
 return false;
-}
-
-  if(results["eth0"] != null && results["eth0"].length > 0) {
-    return results["eth0"][0];
-  } else if(results["en0"] != null && results["en0"].length > 0) {
-    return results["en0"][0];
-  }
-
-  return null;
 }
 
 
