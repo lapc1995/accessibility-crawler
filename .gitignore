@@ -6,3 +6,4 @@
 crawldb.json
 *.log
 screenshot*
+/error

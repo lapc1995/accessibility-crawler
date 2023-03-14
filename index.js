@@ -28,6 +28,9 @@ import * as winston from 'winston';
 
 import YourCustomTransport from './serverTransports.js';
 
+import seedrandom from 'seedrandom';
+
+
 let chunkSize = 5;
 
 const sliceIntoChunks = (arr, chunkSize) => {
@@ -84,7 +87,7 @@ const readWebsiteCSV = async(filename) => {
 } 
 
 const getAccessibilityReport = async(page) => {
-  console.log("getAccessibilityReport");
+  //console.log("getAccessibilityReport");
   let results = await new AxePuppeteer(page).analyze();
   delete results.inapplicable;
 
@@ -203,7 +206,7 @@ const generateFilename = (url, date) => {
     filename = filename.replaceAll(character, "{");
   });
 
-  filename += "-" + date;
+  //filename += "-" + date;
   return filename;
 }
 
@@ -271,6 +274,17 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   let site = null;
   page.setRequestInterception(true);
   page.on('request', async (request) => {
+    let y = request.headers();
+    let t = request.resourceType();
+    let r = request.url();
+    if (request.url().toLowerCase().includes('pdf')) {
+      //request.abort();
+      request.continue({ method: 'HEAD' }, 0)
+      return;
+    }
+
+
+
     await site.OnRequest(request, page);
   }); 
   page.on('response', async (response) => {
@@ -290,10 +304,18 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
     gotoResponse = await page.goto(url, { waitUntil: ['networkidle0'] });
     status = `${gotoResponse.status()}`;
     if(status.charAt(0) == "4" || status.charAt(0) == "5") {
+      await page.close();
       return {url, error: status, filename: generateFilename(url, Date.now()) };
     }
 
   } catch(e) {
+    try {
+      if(e.message != "Navigation failed because browser has disconnected!") {
+        await page.close();
+      }
+    } catch(e) {
+      console.log(e);
+    }
     return {url, error: e.message, filename: generateFilename(url, Date.now()) };
   }
 
@@ -607,6 +629,7 @@ const analyseECommerceDomain = async (url, browser) => {
     product: null,
     cart: null,
     checkout: null,
+    filename: null,
   };
 
   console.log(url);
@@ -625,7 +648,15 @@ const analyseECommerceDomain = async (url, browser) => {
     dirname = dirname.replaceAll(character, "{");
   });
 
+  report.filename = `${dirname}Report`;
+
   dirname = `./data/${dirname}`;
+
+ 
+
+  if(!fs.existsSync("./data")) {
+    fs.mkdirSync("./data");
+  }
 
   if(!fs.existsSync(dirname)) {
     fs.mkdirSync(dirname);
@@ -812,6 +843,7 @@ const analyseECommerceDomain = async (url, browser) => {
 
   //TODO check other pages for product links
 
+  let cookies;
   if(foundPageLink) {
     const result = await analyseECommerceSite(productPageUrl, browser, true);
     if(result.error) {
@@ -829,7 +861,6 @@ const analyseECommerceDomain = async (url, browser) => {
         filename: result.data.filename
       }
     }
-  }
   
   //Get product into cart
 
@@ -864,7 +895,7 @@ const analyseECommerceDomain = async (url, browser) => {
     }
 
   let foundAddToCart = false;
-  const buttons = await result.page.$$('button');
+  const buttons = await result.page.$$('button');//destroyed?
   for(let button of buttons) {
     const text = await result.page.evaluate(el => el.textContent, button);
     if(checkAddToCartText(text)) {
@@ -900,7 +931,6 @@ const analyseECommerceDomain = async (url, browser) => {
       }
     }
   }
- 
 
   await delay(5000);
   
@@ -909,8 +939,14 @@ const analyseECommerceDomain = async (url, browser) => {
     path: 'screenshot1.jpg'
   });
 
-  const cookies = await result.page.cookies();
+  
+  cookies = await result.page.cookies();
   await result.page.close();
+}
+ 
+
+
+
 
   //go to cart
   let cartUrl = url;
@@ -927,28 +963,52 @@ const analyseECommerceDomain = async (url, browser) => {
         cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies);
         if(cartResult.error) {
           SaveReportToJSONFile(cartResult, "./error/");
+          report.cart = {
+            url: cartUrl ,
+            error: cartResult.error
+          }
         } else {
           saveHtmlToFile(dirname, cartResult.data.filename, cartResult.data.html);
           delete cartResult.data.html;
           SaveReportToJSONFile(cartResult.data, dirname);
+          report.cart = {
+            url: cartResult.data.url,
+            filename: cartResult.data.filename
+          }
         }
       } else {
         SaveReportToJSONFile(cartResult, "./error/");
+        report.cart = {
+          url: cartUrl ,
+          error: cartResult.error
+        }
       }
     } else {
       SaveReportToJSONFile(cartResult, "./error/");
+      report.cart = {
+        url: cartUrl ,
+        error: cartResult.error
+      }
     }
   } else {
     saveHtmlToFile(dirname, cartResult.data.filename, cartResult.data.html);
     delete cartResult.data.html;
     SaveReportToJSONFile(cartResult.data, dirname);
+    report.cart = {
+      url: cartResult.data.url,
+      filename: cartResult.data.filename
+    }
+
+    await cartResult.page.screenshot({
+      path: 'screenshot2.jpg'
+    });
   }
 
-  await cartResult.page.screenshot({
-    path: 'screenshot2.jpg'
-  });
+
   
   //go to checkout
+  if(cartResult.page) {
+
   let foundCheckoutButton = false;
   let checkoutUrl = null;
   const cartButtons = await cartResult.page.$$('button');
@@ -997,7 +1057,12 @@ const analyseECommerceDomain = async (url, browser) => {
      
       //await checkOutButtons[i].evaluate(button => button.click());
 
-      await tempPage.waitForNavigation();
+      try {
+        await tempPage.waitForNavigation();
+      } catch (error) {
+        console.log(error);
+      }
+     
       const checkoutUrlTemp = tempPage.url();
 
       await tempPage.close();
@@ -1129,9 +1194,24 @@ const analyseECommerceDomain = async (url, browser) => {
 
   //analyse checkout page
   const checkoutResult = await analyseECommerceSite(checkoutUrl, browser, true, cookies);
-  saveHtmlToFile(dirname, checkoutResult.data.filename, checkoutResult.data.html);
-  delete checkoutResult.data.html;
-  SaveReportToJSONFile(checkoutResult.data, dirname);
+  if(checkoutResult.error) {
+    SaveReportToJSONFile(checkoutResult, './error');
+    report.checkout = {
+      url: checkoutUrl,
+      error: checkoutResult.error
+    }
+  } else {
+    saveHtmlToFile(dirname, checkoutResult.data.filename, checkoutResult.data.html);
+    delete checkoutResult.data.html;
+    SaveReportToJSONFile(checkoutResult.data, dirname);
+    report.checkout = {
+      url: checkoutResult.data.url,
+      filename: checkoutResult.data.filename
+    }
+  }
+
+
+
 
 
   await checkoutResult.page.screenshot({
@@ -1139,15 +1219,9 @@ const analyseECommerceDomain = async (url, browser) => {
   });
 
   await checkoutResult.page.close();
+  }
 
-
-
-
-
-
-
-
-
+  SaveReportToJSONFile(report, dirname);
 
 
 
@@ -1317,11 +1391,11 @@ const runCsvMode = async () => {
     selectedUrl = selectedUrl.replaceAll("*", "");
 
     try {
-      await analyseECommerceDomain(urlSplit[0], browser);
+      await analyseECommerceDomain(selectedUrl, browser);
     }catch(e) {
       console.log("Error", e);
      
-      var filename = urlSplit[0].replaceAll('https://','');
+      var filename = selectedUrl.replaceAll('https://','');
       e.filename = filename;
       SaveReportToJSONFile(e, "./error/");
       
@@ -1330,6 +1404,110 @@ const runCsvMode = async () => {
     var end = new Date() - start;
     console.info('Execution time: %dms', end) 
   }
+  browser.close();
+}
+
+const runTestMode = async () => {
+  const browser = await puppeteer.launch({
+    headless: false,//'chrome',
+    ignoreHTTPSErrors: true,
+    acceptInsecureCerts: true,
+    args: [
+        '--single-process',
+        '--no-sandbox',
+        '--no-zygote',
+        '--disable-gpu',
+        '--ignore-certificate-errors',
+        '--allow-running-insecure-content',
+        '--disable-web-security',
+    ]
+  });
+  const csvPath = "./majestic_million.csv";
+  if(csvPath == null) {
+    console.log("No CSV file path provided");
+    return;
+  }
+
+  if(!fs.existsSync("./error")) {
+    fs.mkdirSync("./error");
+  }
+
+  const db = new JsonDB(new Config("testdb", true, true, '/'));
+  let analysed;
+  try {
+    analysed = await db.getData('/analysed');
+  } catch (error) {
+    analysed = [];
+  }
+
+  const websites = await readWebsiteCSV(csvPath);
+
+  //select 100 random websites
+  let randomWebsites = [];
+  let rng = seedrandom('134tb3q44');
+  for(let i = 0; i < 100; i++) {
+    //generate random number between 0 and 1000000
+    let randomIndex = Math.floor(rng() * websites.length);
+    randomWebsites.push(websites[randomIndex]);
+  }
+
+  for(let website of randomWebsites) {
+    var start = new Date()
+    try {
+      
+      if(analysed.includes(website.Domain)) {
+        console.log("Already analysed", website.Domain);
+        continue;
+      }
+
+      await analyseTestDomain(website.Domain, browser);
+    }catch(e) {
+      console.log("Error", e);
+      var filename = website.Domain.replaceAll('https://','');
+      e.filename = filename;
+      SaveReportToJSONFile(e, "./error/");
+    }
+    await db.push('/analysed[]', website.Domain, true);
+    var end = new Date() - start;
+    console.info('Execution time: %dms', end) 
+  }
+
+  /*
+  for(let website of randomWebsites) {
+
+    let url = website.Domain;
+
+    if(!url.includes('http')) {
+      url = `https://${url}`;
+    }
+  
+    let dirname = url.replaceAll('https://','');
+    dirname = dirname.replaceAll('http://','');
+    if(dirname.slice(-1) == '/') {
+      dirname = dirname.slice(0, -1);
+    }
+  
+    forbiddenFilenameCharacters.forEach((character) => {
+      dirname = dirname.replaceAll(character, "{");
+    });
+
+    dirname = `./data/${dirname}`;
+
+    if(fs.existsSync(dirname)) {
+      fs.readdirSync(dirname).forEach((file) => {
+        let splitDot = file.split(".");
+        let extension = splitDot[splitDot.length - 1];
+        let split = file.split("-");
+        split.pop();
+        let filename = split.join("-");
+        filename = `${filename}.${extension}`;
+        fs.renameSync(`${dirname}/${file}`, `${dirname}/${filename}`)
+      });
+    }
+  
+  
+  }*/
+
   browser.close();
 }
 
@@ -1410,6 +1588,8 @@ const runServer = async () => {
     await runCsvMode();
   } else if(process.env.MODE == "server") {
     runServer();
+  } else if(process.env.MODE == "test") {
+    runTestMode();
   }
 
 })();
@@ -1560,4 +1740,82 @@ const getProcessingOrder = async (id) => {
 }
 
 const sendDataToAmazonBucket = async (data, website) => {
+}
+
+const analyseTestDomain = async (url, browser) => {
+
+  console.log(url);
+
+  if(!url.includes('http')) {
+    url = `https://${url}`;
+  }
+
+  let dirname = url.replaceAll('https://','');
+  dirname = dirname.replaceAll('http://','');
+  if(dirname.slice(-1) == '/') {
+    dirname = dirname.slice(0, -1);
+  }
+
+  forbiddenFilenameCharacters.forEach((character) => {
+    dirname = dirname.replaceAll(character, "{");
+  });
+
+  dirname = `./data/${dirname}`;
+
+  if(!fs.existsSync("./data")) {
+    fs.mkdirSync("./data");
+  }
+
+  if(!fs.existsSync(dirname)) {
+    fs.mkdirSync(dirname);
+  } else {
+    //console.log("Directory already exists => " + dirname);
+    //return;
+  }
+  
+  console.log("Analysing " + url + " ...")
+  const primarySite = await analysePrimarySite(url, browser, {technologyReport: true, dontClosePage: false});
+  if(primarySite.error) {
+    SaveReportToJSONFile(primarySite, "./error");
+    return;
+  }
+  saveHtmlToFile(dirname, primarySite.filename, primarySite.html);
+  delete primarySite.html;
+  SaveReportToJSONFile(primarySite, dirname);
+
+  let filtredLinks = removeDuplicateLinks(primarySite.alinks);
+  console.log(filtredLinks);
+  filtredLinks = filtredLinks.filter((link) => link.href.charAt(0) == '/' || link.href.includes(url));
+  console.log(filtredLinks);
+
+
+  for(let link of filtredLinks) {
+    const fixedLink = fixLink(link.href, url);
+
+    let filename = dirname + "/" + generateFilename(fixedLink) + ".jsonld";
+    if(fs.existsSync(filename)) {
+      continue;
+    }
+
+    console.log("Analysing " + fixedLink + " ...")
+    try {
+      const resultSecondarySite = await analyseSecondarySite(fixedLink, browser, {technologyReport: false, dontClosePage: false});
+      if(resultSecondarySite.error) {
+        SaveReportToJSONFile(resultSecondarySite, "./error");
+      } else {
+        saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
+        delete resultSecondarySite.html;
+        SaveReportToJSONFile(resultSecondarySite, dirname);
+      }
+    } catch (error) {
+      console.log(error);
+      error.link = fixedLink;
+      SaveReportToJSONFile(error, "./error");
+    }
+
+
+    //await resultSecondarySite.page.close();
+  }
+
+  //await primarySite.page.close();
 }
