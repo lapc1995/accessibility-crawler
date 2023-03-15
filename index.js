@@ -274,12 +274,10 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   let site = null;
   page.setRequestInterception(true);
   page.on('request', async (request) => {
-    let y = request.headers();
-    let t = request.resourceType();
-    let r = request.url();
-    if (request.url().toLowerCase().includes('pdf')) {
+    if (request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf')) {
       //request.abort();
-      request.continue({ method: 'HEAD' }, 0)
+      //request.continue({ method: 'HEAD' }, 0)
+      request.abort('blockedbyclient')
       return;
     }
 
@@ -288,6 +286,12 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
     await site.OnRequest(request, page);
   }); 
   page.on('response', async (response) => {
+
+    const headers = response.headers();
+    if(headers['content-type'] == "application/pdf") {
+      return;
+    }
+
     await site.OnResponse(response, page);
   });
 
@@ -301,7 +305,7 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
 
   let gotoResponse = null;
   try {
-    gotoResponse = await page.goto(url, { waitUntil: ['networkidle0'] });
+  gotoResponse = await page.goto(url, { waitUntil: ['networkidle0'] });
     status = `${gotoResponse.status()}`;
     if(status.charAt(0) == "4" || status.charAt(0) == "5") {
       await page.close();
@@ -311,11 +315,14 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   } catch(e) {
     try {
       if(e.message != "Navigation failed because browser has disconnected!") {
+        //if closing happens to fast the program will forever hang???
+        await delay(5000);
         await page.close();
       }
     } catch(e) {
       console.log(e);
     }
+
     return {url, error: e.message, filename: generateFilename(url, Date.now()) };
   }
 
@@ -1319,7 +1326,7 @@ const saveHtmlToFile = async(dir, filename, htmlContent) => {
 
 const runUrlMode = async () => {
   const browser = await puppeteer.launch({
-    headless: false,//'chrome',
+    headless: 'chrome',
     ignoreHTTPSErrors: true,
     acceptInsecureCerts: true,
     args: [
@@ -1342,8 +1349,9 @@ const runUrlMode = async () => {
   var start = new Date()
   //await analyseDomain(url, browser);
   
-  await analyseECommerceDomain(url, browser);
-  //await analyseDomain(url, browser);
+  //await analyseECommerceDomain(url, browser);
+  await analyseTestDomain(url, browser);
+  await analyseTestDomain("https://townofplainfield.com/", browser);
 
   var end = new Date() - start;
   console.info('Execution time: %dms', end) 
@@ -1409,7 +1417,7 @@ const runCsvMode = async () => {
 
 const runTestMode = async () => {
   const browser = await puppeteer.launch({
-    headless: false,//'chrome',
+    headless: 'chrome',
     ignoreHTTPSErrors: true,
     acceptInsecureCerts: true,
     args: [
