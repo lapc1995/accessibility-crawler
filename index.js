@@ -30,6 +30,15 @@ import YourCustomTransport from './serverTransports.js';
 
 import seedrandom from 'seedrandom';
 
+import { run as runUrlMode } from './modes/url.js';
+import { run as runCSVMode } from './modes/csv.js';
+import { run as runRandomSampleCSVMode } from './modes/randomsamplecsv.js';
+
+import { run as runTestMode } from './contexts/test.js';
+
+import { analyseECommerceDomain } from './contexts/ecommerce.js';
+import { analyseHomePlusDomain } from './contexts/homeplus.js';
+
 
 let chunkSize = 5;
 
@@ -628,6 +637,7 @@ const fixLink = (link, url) => {
   }
 }
 
+/*
 const analyseECommerceDomain = async (url, browser) => {
 
   let report = {
@@ -1087,26 +1097,7 @@ const analyseECommerceDomain = async (url, browser) => {
 
   }
   
-/*
 
-  for(let button of cartButtons) {
-    let text = await cartResult.page.evaluate(el => el.textContent, button);
-    text = text.replaceAll('\n', '');
-    text = text.replaceAll(' ', '');
-    if(text.toLowerCase().includes('checkout')) {
-      await button.evaluate(button => button.click() );
-
-      await cartResult.page.waitForNavigation();
-      const checkoutUrlTemp = cartResult.page.url();
-
-      if(!checkoutUrlTemp == cartUrl) {
-        await cartResult.page.goBack();
-        checkoutUrl = checkoutUrlTemp;
-        foundCheckoutButton = true;
-        break;
-      }
-    }
-  }*/
 
   if(!foundCheckoutButton) {
     const cartInputs = await cartResult.page.$$('input');
@@ -1232,7 +1223,7 @@ const analyseECommerceDomain = async (url, browser) => {
 
 
 
-}
+}*/
 
 
 
@@ -1324,6 +1315,7 @@ const saveHtmlToFile = async(dir, filename, htmlContent) => {
     }
 }
 
+/*
 const runUrlMode = async () => {
   const browser = await puppeteer.launch({
     headless: 'chrome',
@@ -1356,8 +1348,9 @@ const runUrlMode = async () => {
   var end = new Date() - start;
   console.info('Execution time: %dms', end) 
   browser.close();
-}
+}*/
 
+/*
 const runCsvMode = async () => {
   const browser = await puppeteer.launch({
     headless: 'chrome',
@@ -1413,8 +1406,9 @@ const runCsvMode = async () => {
     console.info('Execution time: %dms', end) 
   }
   browser.close();
-}
+}*/
 
+/*
 const runTestMode = async () => {
   const browser = await puppeteer.launch({
     headless: 'chrome',
@@ -1479,45 +1473,8 @@ const runTestMode = async () => {
     var end = new Date() - start;
     console.info('Execution time: %dms', end) 
   }
-
-  /*
-  for(let website of randomWebsites) {
-
-    let url = website.Domain;
-
-    if(!url.includes('http')) {
-      url = `https://${url}`;
-    }
-  
-    let dirname = url.replaceAll('https://','');
-    dirname = dirname.replaceAll('http://','');
-    if(dirname.slice(-1) == '/') {
-      dirname = dirname.slice(0, -1);
-    }
-  
-    forbiddenFilenameCharacters.forEach((character) => {
-      dirname = dirname.replaceAll(character, "{");
-    });
-
-    dirname = `./data/${dirname}`;
-
-    if(fs.existsSync(dirname)) {
-      fs.readdirSync(dirname).forEach((file) => {
-        let splitDot = file.split(".");
-        let extension = splitDot[splitDot.length - 1];
-        let split = file.split("-");
-        split.pop();
-        let filename = split.join("-");
-        filename = `${filename}.${extension}`;
-        fs.renameSync(`${dirname}/${file}`, `${dirname}/${filename}`)
-      });
-    }
-  
-  
-  }*/
-
   browser.close();
-}
+}*/
 
 const runServer = async () => {
 
@@ -1590,14 +1547,28 @@ const runServer = async () => {
 
 (async () => {
 
+  let context = null;
+  if(process.env.CONTEXT == "ecommerce") {
+    context = analyseECommerceDomain;
+  } else if(process.env.CONTEXT == "general") {
+  
+  } else if(process.env.CONTEXT == "homeplus") {
+    context = analyseHomePlusDomain;
+  }
+
+  if(context == null) {
+    console.log("No context provided");
+    return;
+  }
+
   if(process.env.MODE == "url") {
-    await runUrlMode();
+    await runUrlMode(context);
   } else if(process.env.MODE == "csv") {
-    await runCsvMode();
+    await runCSVMode(context);
   } else if(process.env.MODE == "server") {
     runServer();
-  } else if(process.env.MODE == "test") {
-    runTestMode();
+  } else if(process.env.MODE == "randomsamplecsv") {
+    await runRandomSampleCSVMode();
   }
 
 })();
