@@ -7,3 +7,6 @@ crawldb.json
 *.log
 screenshot*
 /error
+/dataTest
+/errorTest
+testData.zip

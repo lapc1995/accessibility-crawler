@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, forbiddenFilenameCharacters, delay } from './../utils.js';
-import { getReportForURLParallel } from '../analyser.js'
+import { getReportForURLParallel, getALinks } from '../analyser.js'
 
-const analyseECommerceSite = async (url, browser, dontClosePage, cookies = null) => {
-    return await getReportForURLParallel(url, browser, {technologyReport: true, dontClosePage, cookies}) 
+export const analyseECommerceSite = async (url, browser, dontClosePage, cookies = null, company = null) => {
+    return await getReportForURLParallel(url, browser, {technologyReport: true, dontClosePage, cookies, company}) 
 }
 
-export const analyseECommerceDomain = async (url, browser) => {
+export const analyseECommerceDomain = async (url, browser, options) => {
 
     let report = {
         main: null,
@@ -47,8 +47,10 @@ export const analyseECommerceDomain = async (url, browser) => {
       //console.log("Directory already exists => " + dirname);
       //return;
     }
+
+    let company = options?.company ? options.company : null;
     
-    const primarySite = await analyseECommerceSite(url, browser, true) ;
+    const primarySite = await analyseECommerceSite(url, browser, true, null, company) ;
     if(primarySite.error) {
         saveReportToJSONFile(primarySite, "./error");
         report.main = {
@@ -77,7 +79,7 @@ export const analyseECommerceDomain = async (url, browser) => {
         }
     }
     if(foundTermsOfServicePageLink) {
-        const resultTerms = await analyseECommerceSite(termsOfServicePageUrl, browser, true);
+        const resultTerms = await analyseECommerceSite(termsOfServicePageUrl, browser, true, null, company);
         saveHtmlToFile(dirname, resultTerms.data.filename, resultTerms.data.html);
         delete resultTerms.data.html;
         saveReportToJSONFile(resultTerms.data, dirname);
@@ -192,12 +194,14 @@ export const analyseECommerceDomain = async (url, browser) => {
         noRepeatLinks = noRepeatLinks.filter((link) => {
             const tempLink = fixLink(link.href, url);
             const count = (tempLink.match(/\//g) || []).length;
-            return (!tempLink.includes('gift') && tempLink.includes(url) && count == 3) 
+            return (!tempLink.includes('gift') && tempLink.includes(url) /*&& count == 3*/) 
         });
+        let counter = 0
+        let maxCounter = 15;
         for(let link of noRepeatLinks) {
             const tempLink = fixLink(link.href, url);
             const count = (tempLink.match(/\//g) || []).length;
-            if(!tempLink.includes('gift') && tempLink.includes(url) && count == 3) {
+            if(!tempLink.includes('gift') && tempLink.includes(url) /*&& count == 3*/) {
                 const tempPage = await browser.newPage();
                 await tempPage.goto(tempLink);
                 const isProductPage = await checkIfPageIsIsProduct(tempPage);
@@ -207,8 +211,12 @@ export const analyseECommerceDomain = async (url, browser) => {
                     foundPageLink = true;
                     break;
                 } else {
-                    await delay(2000);
+                    await delay(1000);
                 }
+            }
+            counter++;
+            if(counter > maxCounter) {
+                break;
             }
         }
     }
@@ -219,7 +227,7 @@ export const analyseECommerceDomain = async (url, browser) => {
   
     let cookies;
     if(foundPageLink) {
-        const result = await analyseECommerceSite(productPageUrl, browser, true);
+        const result = await analyseECommerceSite(productPageUrl, browser, true, null, company);
         if(result.error) {
             saveReportToJSONFile(result, './error');
             report.product = {
@@ -322,13 +330,13 @@ export const analyseECommerceDomain = async (url, browser) => {
         cartUrl = cartUrl.slice(0, -1);
     }
     cartUrl = cartUrl + '/cart';
-    let cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies);
+    let cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies, company);
     if(cartResult.error){
         if(cartResult.error == "404") {
             var cartLinks = primarySite.data.alinks.filter((link) => (link.href.includes('/cart')));
             if(cartLinks.length > 0) {
                 cartUrl = fixLink(cartLinks[0].href, url);
-                cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies);
+                cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies, company);
                 if(cartResult.error) {
                     saveReportToJSONFile(cartResult, "./error/");
                     report.cart = {
@@ -455,6 +463,7 @@ export const analyseECommerceDomain = async (url, browser) => {
                         await cartResult.page.waitForNavigation();
                     } catch (error) {
                         console.log('No checkout button found');
+                        saveReportToJSONFile(report, dirname);
                         return;
                     }
                     const checkoutUrlTemp = cartResult.page.url();
@@ -484,6 +493,7 @@ export const analyseECommerceDomain = async (url, browser) => {
                     await cartResult.page.waitForNavigation();
                 } catch (error) {
                     console.log('No checkout button found');
+                    saveReportToJSONFile(report, dirname);
                     return;
                 }
                 const checkoutUrlTemp = cartResult.page.url();
@@ -507,6 +517,7 @@ export const analyseECommerceDomain = async (url, browser) => {
                         await cartResult.page.waitForNavigation();
                     } catch (error) {
                         console.log('No checkout button found');
+                        saveReportToJSONFile(report, dirname);
                         return;
                     }
                     const checkoutUrlTemp = cartResult.page.url();
@@ -524,6 +535,7 @@ export const analyseECommerceDomain = async (url, browser) => {
   
         if(!foundCheckoutButton) {
             console.log('No checkout button found');
+            saveReportToJSONFile(report, dirname);
             return;
         }
   
@@ -532,7 +544,7 @@ export const analyseECommerceDomain = async (url, browser) => {
         await cartResult.page.close();
   
         //analyse checkout page
-        const checkoutResult = await analyseECommerceSite(checkoutUrl, browser, true, cookies);
+        const checkoutResult = await analyseECommerceSite(checkoutUrl, browser, true, cookies, company);
         if(checkoutResult.error) {
             saveReportToJSONFile(checkoutResult, './error');
             report.checkout = {

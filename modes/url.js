@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 
 export const run = async(contextFunction) => {
     const browser = await puppeteer.launch({
-        headless: 'chrome',
+        headless: false,//'chrome',
         ignoreHTTPSErrors: true,
         acceptInsecureCerts: true,
         args: [

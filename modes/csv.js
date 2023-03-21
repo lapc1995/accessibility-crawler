@@ -4,7 +4,7 @@ import { readWebsiteCSV, saveReportToJSONFile } from './../utils.js';
 
 export const run = async (contextFunction) => {
     const browser = await puppeteer.launch({
-        headless: 'chrome',
+        headless: false,//'chrome',
         ignoreHTTPSErrors: true,
         acceptInsecureCerts: true,
         args: [
@@ -22,6 +22,10 @@ export const run = async (contextFunction) => {
         console.log("No CSV file path provided");
         return;
     }
+
+    if(!fs.existsSync("./data")) {
+        fs.mkdirSync("./data");
+    }
   
     if(!fs.existsSync("./error")) {
         fs.mkdirSync("./error");
@@ -33,16 +37,18 @@ export const run = async (contextFunction) => {
 
         let urlSplit = website.Domain.split(";");
         let selectedUrl = urlSplit[0];
+        let company = null;
         if(process.env.CONTEXT == "ecommerce") {
             let selectedUrls = urlSplit.filter((url) => url.startsWith("shop") || url.startsWith("store"));
             if(selectedUrls.length > 0) {
                 selectedUrl = selectedUrls[0];
             }
+            company = website.Company;
         }
         selectedUrl = selectedUrl.replaceAll("*", "");
   
         try {
-            await contextFunction(selectedUrl, browser);
+            await contextFunction(selectedUrl, browser, {company: company});
         }catch(e) {
             console.log("Error", e);
             var filename = selectedUrl.replaceAll('https://','');

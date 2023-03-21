@@ -45,13 +45,20 @@ export const analyseHomePlusDomain = async (url, browser) => {
     saveReportToJSONFile(primarySite, dirname);
   
     let filtredLinks = removeDuplicateLinks(primarySite.alinks);
-    console.log(filtredLinks);
-    filtredLinks = filtredLinks.filter((link) => link.href.charAt(0) == '/' || link.href.includes(url));
-    console.log(filtredLinks);
+    
+    let parsedUrl = new URL(primarySite.url);
+    parsedUrl.pathname = '/';
+    parsedUrl.hash = '';
+    parsedUrl.search = '';
+    parsedUrl = parsedUrl.toString();
+    parsedUrl = parsedUrl.replaceAll('https://','');
+    
+    filtredLinks = filtredLinks.filter((link) => link.href.charAt(0) == '/' || link.href.includes(parsedUrl));
+    console.log(filtredLinks.length + " links found");
   
   
     for(let link of filtredLinks) {
-        const fixedLink = fixLink(link.href, url);
+        const fixedLink = fixLink(link.href, parsedUrl);
   
         let filename = dirname + "/" + generateFilename(fixedLink) + ".jsonld";
         if(fs.existsSync(filename)) {
@@ -64,9 +71,11 @@ export const analyseHomePlusDomain = async (url, browser) => {
             if(resultSecondarySite.error) {
                 saveReportToJSONFile(resultSecondarySite, "./error");
             } else {
-                saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
-                delete resultSecondarySite.html;
-                saveReportToJSONFile(resultSecondarySite, dirname);
+                if(resultSecondarySite.url.includes(parsedUrl)) {
+                    saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
+                    delete resultSecondarySite.html;
+                    saveReportToJSONFile(resultSecondarySite, dirname);
+                }
             }
         } catch (error) {
             console.log(error);

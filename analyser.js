@@ -2,6 +2,7 @@ import Wappalyzer from './wappalyzer/drivers/npm/driver.js'
 import puppeteer from 'puppeteer';
 import { generateFilename } from './utils.js';
 import { AxePuppeteer } from '@axe-core/puppeteer';
+import { delay } from './utils.js';
 
 
 export const analysePrimarySite = async (url, browser) => {
@@ -104,24 +105,54 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
   
         let gotoResponse = null;
         try {
-            gotoResponse = await page.goto(url, { waitUntil: ['networkidle0'] });
+            gotoResponse = await page.goto(url, { waitUntil: ['networkidle0']});
+            /*
+            if (gotoResponse === null) {
+                console.log("Got null, trying wait.");
+                gotoResponse = await page.waitForResponse(() => true);
+            }*/
+            console.log(gotoResponse)
             status = `${gotoResponse.status()}`;
             if(status.charAt(0) == "4" || status.charAt(0) == "5") {
                 await page.close();
                 return {url, error: status, filename: generateFilename(url, Date.now()) };
             }
         } catch(e) {
-            try {
-                if(e.message != "Navigation failed because browser has disconnected!") {
-                    //if closing happens to fast the program will forever hang???
-                    await delay(5000);
-                    await page.close();
+            console.log(e)
+            if(e.name == "TimeoutError") {
+
+                try {
+                    gotoResponse = await page.goto(url, { waitUntil: ['networkidle2']});
+                    status = `${gotoResponse.status()}`;
+                    if(status.charAt(0) == "4" || status.charAt(0) == "5") {
+                        await page.close();
+                        return {url, error: status, filename: generateFilename(url, Date.now()) };
+                    }
+                } catch(e) {
+                    try {
+                        if(e.message != "Navigation failed because browser has disconnected!") {
+                            //if closing happens to fast the program will forever hang???
+                            await delay(5000);
+                            await page.close();
+                        }
+                    } catch(e) {
+                        console.log(e);
+                    }
+                    return {url, error: e.message, filename: generateFilename(url, Date.now()) }
                 }
-            } catch(e) {
-                console.log(e);
-            }
-  
-            return {url, error: e.message, filename: generateFilename(url, Date.now()) };
+            } else {
+                try {
+                    if(e.message != "Navigation failed because browser has disconnected!") {
+                        //if closing happens to fast the program will forever hang???
+                        await delay(5000);
+                        await page.close();
+                    }
+                } catch(e) {
+                    console.log(e);
+                }
+      
+                return {url, error: e.message, filename: generateFilename(url, Date.now()) };
+            } 
         }
   
         if(status == "404") {
@@ -147,25 +178,29 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
             tasks.push(site.analyze(page));
         }
   
-        var result = await Promise.all(tasks);
+        var result = await Promise.allSettled(tasks);
   
         data["@context"] = "http://luiscarvalho.dev/contexts/",
         data["@type"] = "pageReport"
         data.originalUrl = url;
         data.url = page.url(),
-        data.accessibility = result[0];
-        data.externalJavascript = result[1];
-        data.externalCSS = result[2];
+        data.accessibility = result[0].status == "fulfilled" ? result[0].value : result[0].reason;
+        data.externalJavascript = result[1].status == "fulfilled" ? result[1].value : result[1].reason;
+        data.externalCSS = result[2].status == "fulfilled" ? result[2].value : result[2].reason;
         data.html = html;
-        data.images = result[3];
-        data.alinks = result[4];
-        data.filename = result[5];
-        data.jsCoverage = result[6].jsCoverage;
-        data.cssCoverage = result[6].cssCoverage;
-        data.cookies = result[7];
+        data.images = result[3].status == "fulfilled" ? result[3].value : result[3].reason;
+        data.alinks = result[4].status == "fulfilled" ? result[4].value : result[4].reason;
+        data.filename = result[5].status == "fulfilled" ? result[5].value : result[5].reason;
+        data.jsCoverage = result[6].status == "fulfilled" ? result[6].value.jsCoverage : result[6].reason;
+        data.cssCoverage = result[6].status == "fulfilled" ? result[6].value.cssCoverage : result[6].reason;
+        data.cookies = result[7].status == "fulfilled" ? result[7].value : result[7].reason;
+
+        if(options.company) {
+            data.company = options.company;
+        }
   
         if(options.technologyReport && result[8] != null) {
-            data.technologies = cleanTechnologyReport(result[8].technologies);
+            data.technologies = result[8].status == "fulfilled" ? cleanTechnologyReport(result[8].value.technologies) : result[8].reason;
         }
   
         if(options.phone) {
@@ -277,9 +312,7 @@ const stopCoverage = async (page) => {
 }
 
 const getAccessibilityReport = async(page) => {
-    //console.log("getAccessibilityReport");
     let results = await new AxePuppeteer(page).analyze();
-    delete results.inapplicable;
     results = cleanAccessaibilityReport(results);
     return results;
 }
@@ -331,7 +364,7 @@ const getImages = async(page) => {
     return images;
 }
 
-const getALinks = async(page) => {
+export const getALinks = async(page) => {
     const alinks = []
     let as = await page.$$('a');
     for (const a of as) {
@@ -369,6 +402,13 @@ const cleanAccessaibilityReport = (accessibilityReport) => {
     cleanAccessibilityBarrier(accessibilityReport.passes);
     cleanAccessibilityBarrier(accessibilityReport.incomplete);
     cleanAccessibilityBarrier(accessibilityReport.violations);
+    cleanAccessibilityBarrier(accessibilityReport.inapplicable);
+
+    accessibilityReport.PassesCount = accessibilityReport.passes.length;
+    accessibilityReport.IncompleteCount = accessibilityReport.incomplete.length;
+    accessibilityReport.ViolationsCount = accessibilityReport.violations.length;
+    accessibilityReport.InapplicableCount = accessibilityReport.inapplicable.length;
+
     return accessibilityReport;
 }
   

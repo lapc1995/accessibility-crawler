@@ -38,6 +38,7 @@ import { run as runTestMode } from './contexts/test.js';
 
 import { analyseECommerceDomain } from './contexts/ecommerce.js';
 import { analyseHomePlusDomain } from './contexts/homeplus.js';
+import { analyseECommerceDomainManually } from './contexts/manual.js';
 
 
 let chunkSize = 5;
@@ -1554,6 +1555,10 @@ const runServer = async () => {
   
   } else if(process.env.CONTEXT == "homeplus") {
     context = analyseHomePlusDomain;
+  } else if (process.env.CONTEXT == "single") {
+  
+  } else if(process.env.CONTEXT == "manual") {
+    context = analyseECommerceDomainManually;
   }
 
   if(context == null) {
@@ -1568,7 +1573,7 @@ const runServer = async () => {
   } else if(process.env.MODE == "server") {
     runServer();
   } else if(process.env.MODE == "randomsamplecsv") {
-    await runRandomSampleCSVMode();
+    await runRandomSampleCSVMode(context);
   }
 
 })();

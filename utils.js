@@ -61,6 +61,13 @@ export const generateFilename = (url, date) => {
     });
   
     //filename += "-" + date;
+
+    filename = filename.replaceAll(' ', '');
+    filename = filename.replaceAll('\n', '');
+    filename = filename.replaceAll('\t', '');
+
+    filename = reduceFilenameSize(filename);
+
     return filename;
 }
 
@@ -81,4 +88,11 @@ export const readWebsiteCSV = async(filename) => {
 
 export const delay = (delayInms) => {
     return new Promise(resolve => setTimeout(resolve, delayInms));
+}
+
+export const reduceFilenameSize = (filename) => {
+    if(filename.length > 200) {
+        filename = filename.substring(0, 200);
+    }
+    return filename;
 }
