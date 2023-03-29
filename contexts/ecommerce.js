@@ -247,6 +247,7 @@ export const analyseECommerceDomain = async (url, browser, options) => {
         //Get product into cart
   
         //Set to one time purchase
+        /*
         const labels = await result.page.$$('label');
         console.log("labels", labels.length);
         for(let label of labels) {
@@ -255,15 +256,15 @@ export const analyseECommerceDomain = async (url, browser, options) => {
             text = text.replace("-", '');
             if(text.toLowerCase().includes('onetime')) {
                 const inputId = await result.page.evaluate(el => el.getAttribute("for"), label);
-                //const input = await result.page.$(`#${inputId}`);
                 await result.page.evaluate((inputId) => {
                     document.querySelector(`#${inputId}`).click();
                 }, inputId);
                 break;
             }
-        }
+        }*/
   
         //Select size
+        /*
         const divs2 = await result.page.$$('span');
         for(let div of divs2) {
             const text = await result.page.evaluate(el => el.textContent, div);
@@ -314,11 +315,13 @@ export const analyseECommerceDomain = async (url, browser, options) => {
         }
   
         await delay(5000);
-    
+    */
+        /*
         await result.page.screenshot({
             path: 'screenshot1.jpg'
         });
-  
+        */
+    
     
         cookies = await result.page.cookies();
         await result.page.close();
@@ -375,12 +378,14 @@ export const analyseECommerceDomain = async (url, browser, options) => {
             filename: cartResult.data.filename
         }
   
+        /*
         await cartResult.page.screenshot({
             path: 'screenshot2.jpg'
-        });
+        });*/
     }
     
     //go to checkout
+    /*
     if(cartResult.page) {
         let foundCheckoutButton = false;
         let checkoutUrl = null;
@@ -566,7 +571,7 @@ export const analyseECommerceDomain = async (url, browser, options) => {
         });
   
         await checkoutResult.page.close();
-    }
+    }*/
   
     saveReportToJSONFile(report, dirname);
 }

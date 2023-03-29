@@ -171,8 +171,23 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         var html = await getHTML(page);
   
         data.date = Date.now();
+
+        const maxTimeout = 30000;
+
+        const withTimeout = (promise, millis) => {
+            const timeoutPromise = new Promise((resolve, reject) => {
+                setTimeout( 
+                    () => reject('Timeout after ' + millis + 'ms'),
+                    millis
+                )
+            });
+            return Promise.race([
+                promise,
+                timeoutPromise
+            ])
+        }
   
-        const tasks = [getAccessibilityReport(page), getExternalJavacript(page), getExternalCSS(page), getImages(page), getALinks(page), generateFilename(url, data.date), stopCoverage(page), getCookies(page)];
+        const tasks = [withTimeout(getAccessibilityReport(page), maxTimeout), withTimeout(getExternalJavacript(page), maxTimeout), withTimeout(getExternalCSS(page), maxTimeout), withTimeout(getImages(page), maxTimeout), withTimeout(getALinks(page), maxTimeout), withTimeout(generateFilename(url, data.date)), withTimeout(stopCoverage(page)), withTimeout(getCookies(page))];
   
         if(options.technologyReport) {
             tasks.push(site.analyze(page));
