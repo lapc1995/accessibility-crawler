@@ -5,6 +5,29 @@ import archiver from 'archiver';
 
 export const forbiddenFilenameCharacters = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
+export const extensionsToIgnore = [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip", ".rar", ".tar.gz"];
+
+export const removeNonHTTPSLinks = (links) => {
+    return links.filter(link => {
+      const { href } = link;
+      return href && !href.match(/^(mailto|tel|sms|intent|javascript):/);
+    });
+  }
+
+export const hasInvalidExtension = (url) => {
+    const urlParts = url.split(".");
+    const extension = "." + urlParts[urlParts.length - 1];
+    return extensionsToIgnore.includes(extension);
+}
+
+export const removeHashFromUrl = (url) => {
+    const hashIndex = url.indexOf("#");
+    if (hashIndex !== -1) {
+      url = url.substring(0, hashIndex);
+    }
+    return url;
+}
+
 export const saveHtmlToFile = async(dir, filename, htmlContent) => {
     try {
         fs.writeFileSync(`${dir}/${filename}.html`, htmlContent);
@@ -33,8 +56,12 @@ export const removeDuplicateLinks = (alinks) => {
 }
 
 export const fixLink = (link, url) => {
+
+    
     link = link.trim();
     url = url.trim();
+    let fixedUrl = new URL(link, url).href;
+    /*
     if(link.includes('http')) {
         return link;
     } else {
@@ -46,7 +73,8 @@ export const fixLink = (link, url) => {
         }
         url += link;
         return url;
-    }
+    }*/
+    return fixedUrl;
 }
 
 export const generateFilename = (url, date) => {
@@ -138,8 +166,21 @@ export const withTimeout = async (promise, millis) => {
     ]);
 }
   
-  
-  
+export const findMatchingLinks = (url, links) => {
+    const domainRegex = /^((?:https?:)?\/\/)?([^:\/\n?]+)(?:\/.*)?$/im;
+    const domain = url.match(domainRegex)[2];
+    const subdomains = domain.split(".").map((value, index, array) =>  {
+        array.slice(index).join(".")
+    });
+    const matchingLinks = links.filter(link => {
+      const linkDomain = link.href.match(domainRegex) !== null ? link.href.match(domainRegex)[2] : "";
+      const linkSubdomains = linkDomain.split(".").map((value, index, array) => array.slice(index).join("."));
+      const pathRegex = /^\/|^\w/i;
+      const linkPath = link.href.match(pathRegex)!==null ? link.href.match(pathRegex)[0] : "";
+      return linkDomain === domain || subdomains.some(subdomain => subdomain === linkDomain) || linkSubdomains.some(subdomain => subdomains.includes(subdomain)) || linkPath === "/" || linkPath === "" || linkPath.startsWith("./") || linkPath.startsWith("../");
+    });
+    return matchingLinks;
+}
   
   
   

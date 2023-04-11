@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import robotsParser from 'robots-txt-parser';
-import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters} from './../utils.js';
+import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters, hasInvalidExtension, removeHashFromUrl, delay, removeNonHTTPSLinks} from './../utils.js';
 import { analysePrimarySite, analyseSecondarySite, getReportForURLParallel } from '../analyser.js'
 
 
@@ -64,21 +64,31 @@ export const analyseHomePlusDomain = async (url, browser) => {
     let filtredLinks = removeDuplicateLinks(primarySite.alinks);
     
     let parsedUrl = new URL(primarySite.url);
+
     parsedUrl.pathname = '/';
     parsedUrl.hash = '';
     parsedUrl.search = '';
     parsedUrl = parsedUrl.toString();
     parsedUrl = parsedUrl.replaceAll('https://','');
-    
-    filtredLinks = filtredLinks.filter((link) => link.href.charAt(0) == '/' || link.href.includes(parsedUrl));
-    console.log(filtredLinks.length + " links found");
-  
-    //links from robots.txt as to be ignored
 
+    filtredLinks = filtredLinks.filter((link) => link.href != null && link.href.length > 1);
+
+    filtredLinks = filtredLinks.filter((link) => (link.href.charAt(0) == '/' && link.href.length > 1) || link.href.includes(parsedUrl) || (!link.href.includes('http') && !link.href.includes('https') && link.href.charAt(0) != '/' && link.href.length > 0 && link.href != ''));
+    filtredLinks = removeNonHTTPSLinks(filtredLinks);
+    
+    filtredLinks = filtredLinks.filter((link) => !hasInvalidExtension(link.href));
+    filtredLinks = filtredLinks.map((link) => {
+        link.href = removeHashFromUrl(link.href);
+        return link;
+    });
+    filtredLinks = removeDuplicateLinks(filtredLinks);
+
+
+    console.log(filtredLinks.length + " links found");
     const analysedUrls = [];
 
     for(let link of filtredLinks) {
-        const fixedLink = fixLink(link.href, parsedUrl);
+        const fixedLink = fixLink(link.href, primarySite.url);
   
         let filename = dirname + "/" + generateFilename(fixedLink) + ".jsonld";
         if(fs.existsSync(filename)) {
@@ -105,6 +115,7 @@ export const analyseHomePlusDomain = async (url, browser) => {
                     saveReportToJSONFile(resultSecondarySite, dirname);
                 }
             }
+            await delay(3000);
         } catch (error) {
             console.log(error);
             error.link = fixedLink;

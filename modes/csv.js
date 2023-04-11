@@ -4,7 +4,7 @@ import { readWebsiteCSV, saveReportToJSONFile } from './../utils.js';
 
 export const run = async (contextFunction) => {
     const browser = await puppeteer.launch({
-        headless: false,//'chrome',
+        headless: 'chrome',
         ignoreHTTPSErrors: true,
         acceptInsecureCerts: true,
         args: [

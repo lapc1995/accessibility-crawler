@@ -286,7 +286,7 @@ const getReportForURLParallel = async(url, browser, options = {}) => {
   let site = null;
   page.setRequestInterception(true);
   page.on('request', async (request) => {
-    if (request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf')) {
+    if ((request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf'))) {
       //request.abort();
       //request.continue({ method: 'HEAD' }, 0)
       request.abort('blockedbyclient')

@@ -2,7 +2,7 @@ import Wappalyzer from './wappalyzer/drivers/npm/driver.js'
 import puppeteer from 'puppeteer';
 import { generateFilename } from './utils.js';
 import { AxePuppeteer } from '@axe-core/puppeteer';
-import { delay, withTimeout } from './utils.js';
+import { delay, withTimeout, hasInvalidExtension } from './utils.js';
 
 
 export const analysePrimarySite = async (url, browser) => {
@@ -63,7 +63,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
   
         var status = null;
   
-        if(!url.includes("https://")) {
+        if(!url.includes("https://") && !url.includes("http://")) {
             url = "https://" + url;
         }
   
@@ -83,7 +83,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         let site = null;
         page.setRequestInterception(true);
         page.on('request', async (request) => {
-            if (request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf')) {
+            if ((request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf')) ||   hasInvalidExtension(request.url().toLowerCase())) {
                 request.abort('blockedbyclient')
                 return;
             }
