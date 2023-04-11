@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { saveHtmlToFile, saveReportToJSONFile, forbiddenFilenameCharacters} from './../utils.js';
-import { analysePrimarySite } from '../analyser.js'
+import { getReportForURLParallel } from '../analyser.js'
 
 export const analyseSingleDomain = async (url, browser) => {
 
@@ -34,7 +34,7 @@ export const analyseSingleDomain = async (url, browser) => {
     }
     
     console.log("Analysing " + url + " ...")
-    const primarySite = await analysePrimarySite(url, browser, {technologyReport: true, dontClosePage: false});
+    const primarySite = await getReportForURLParallel(url, browser, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
         saveReportToJSONFile(primarySite, "./error");
         return;
@@ -42,6 +42,4 @@ export const analyseSingleDomain = async (url, browser) => {
     saveHtmlToFile(dirname, primarySite.filename, primarySite.html);
     delete primarySite.html;
     saveReportToJSONFile(primarySite, dirname);
-  
-    await primarySite.page.close();
 }

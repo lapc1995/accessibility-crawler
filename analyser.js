@@ -2,7 +2,7 @@ import Wappalyzer from './wappalyzer/drivers/npm/driver.js'
 import puppeteer from 'puppeteer';
 import { generateFilename } from './utils.js';
 import { AxePuppeteer } from '@axe-core/puppeteer';
-import { delay } from './utils.js';
+import { delay, withTimeout } from './utils.js';
 
 
 export const analysePrimarySite = async (url, browser) => {
@@ -20,6 +20,8 @@ export const analysePhoneSite = async (url, browser) => {
 export const getReportForURLParallel = async(url, browser, options = {}) => {
 
     try {
+
+        const startTime = Date.now();
   
         const wappalyzerOptions = {
             debug: true,
@@ -52,6 +54,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
             filename: null,
             alinks: null,
             cookies: null,
+            totalTimeMillis: null,
         }
   
         if(options.technologyReport) {
@@ -81,7 +84,6 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         page.setRequestInterception(true);
         page.on('request', async (request) => {
             if (request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf')) {
-                //request.continue({ method: 'HEAD' }, 0)
                 request.abort('blockedbyclient')
                 return;
             }
@@ -154,6 +156,15 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
                 return {url, error: e.message, filename: generateFilename(url, Date.now()) };
             } 
         }
+
+        if(options.analysedUrls) {
+            let currentUrl = page.url()
+            if(options.analysedUrls.includes(currentUrl)){
+                await page.close();
+                return {url, error: "Already analysed", filename: generateFilename(url, Date.now()) };
+            }
+        }
+
   
         if(status == "404") {
             return {url, error: "404", filename: generateFilename(url, Date.now()) };
@@ -174,27 +185,14 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
 
         const maxTimeout = 30000;
 
-        const withTimeout = (promise, millis) => {
-            const timeoutPromise = new Promise((resolve, reject) => {
-                setTimeout( 
-                    () => reject('Timeout after ' + millis + 'ms'),
-                    millis
-                )
-            });
-            return Promise.race([
-                promise,
-                timeoutPromise
-            ])
-        }
-  
-        const tasks = [withTimeout(getAccessibilityReport(page), maxTimeout), withTimeout(getExternalJavacript(page), maxTimeout), withTimeout(getExternalCSS(page), maxTimeout), withTimeout(getImages(page), maxTimeout), withTimeout(getALinks(page), maxTimeout), withTimeout(generateFilename(url, data.date)), withTimeout(stopCoverage(page)), withTimeout(getCookies(page))];
-  
+        const tasks = [withTimeout(getAccessibilityReport(page), maxTimeout), withTimeout(getExternalJavacript(page), maxTimeout), withTimeout(getExternalCSS(page), maxTimeout), withTimeout(getImages(page), maxTimeout), withTimeout(getALinks(page), maxTimeout), withTimeout(stopCoverage(page), maxTimeout), withTimeout(getCookies(page), maxTimeout)];
+
         if(options.technologyReport) {
             tasks.push(site.analyze(page));
         }
   
         var result = await Promise.allSettled(tasks);
-  
+
         data["@context"] = "http://luiscarvalho.dev/contexts/",
         data["@type"] = "pageReport"
         data.originalUrl = url;
@@ -205,17 +203,18 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         data.html = html;
         data.images = result[3].status == "fulfilled" ? result[3].value : result[3].reason;
         data.alinks = result[4].status == "fulfilled" ? result[4].value : result[4].reason;
-        data.filename = result[5].status == "fulfilled" ? result[5].value : result[5].reason;
-        data.jsCoverage = result[6].status == "fulfilled" ? result[6].value.jsCoverage : result[6].reason;
-        data.cssCoverage = result[6].status == "fulfilled" ? result[6].value.cssCoverage : result[6].reason;
-        data.cookies = result[7].status == "fulfilled" ? result[7].value : result[7].reason;
+        data.filename = generateFilename(url, data.date)
+        data.jsCoverage = result[5].status == "fulfilled" ? result[5].value.jsCoverage : result[5].reason;
+        data.cssCoverage = result[5].status == "fulfilled" ? result[5].value.cssCoverage : result[5].reason;
+        data.cookies = result[6].status == "fulfilled" ? result[6].value : result[6].reason;
+        data.totalTimeMillis = Date.now() - startTime;
 
         if(options.company) {
             data.company = options.company;
         }
   
-        if(options.technologyReport && result[8] != null) {
-            data.technologies = result[8].status == "fulfilled" ? cleanTechnologyReport(result[8].value.technologies) : result[8].reason;
+        if(options.technologyReport && result[7] != null) {
+            data.technologies = result[7].status == "fulfilled" ? cleanTechnologyReport(result[7].value.technologies) : result[7].reason;
         }
   
         if(options.phone) {

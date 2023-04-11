@@ -114,4 +114,33 @@ export const zipDomainFolder = async(dir) => {
       archive.finalize();
     });
 }
+
+export const withTimeout = async (promise, millis) => {
+    let timer = null;
+
+    const timeoutPromise = new Promise((resolve, reject) => {
+      timer = setTimeout(() => reject('Timeout after ' + millis + 'ms'), millis);
+    });
+
+    const runningPromise = new Promise((resolve, reject) => {
+        promise.then((value) => {
+            clearTimeout(timer);
+            resolve(value);
+        }).catch((error) => {
+            clearTimeout(timer);
+            reject(error.message);
+        })
+    });
+
+    return Promise.race([
+        runningPromise,
+        timeoutPromise
+    ]);
+}
+  
+  
+  
+  
+  
+  
   

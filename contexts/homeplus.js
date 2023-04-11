@@ -1,6 +1,15 @@
 import * as fs from 'fs';
+import robotsParser from 'robots-txt-parser';
 import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters} from './../utils.js';
-import { analysePrimarySite, analyseSecondarySite } from '../analyser.js'
+import { analysePrimarySite, analyseSecondarySite, getReportForURLParallel } from '../analyser.js'
+
+
+const robots = robotsParser(
+{
+    userAgent: 'Googlebot', // The default user agent to use when looking for allow/disallow rules, if this agent isn't listed in the active robots.txt, we use *.
+    allowOnNeutral: false // The value to use when the robots.txt rule's for allow and disallow are balanced on whether a link can be crawled.
+});
+
 
 export const analyseHomePlusDomain = async (url, browser) => {
 
@@ -34,6 +43,15 @@ export const analyseHomePlusDomain = async (url, browser) => {
     }
     
     console.log("Analysing " + url + " ...")
+    await robots.useRobotsFor(url);
+    await robots.useRobotsFor(url);
+
+    const canCrawlMain = await robots.canCrawl(url)
+    if(!canCrawlMain) {
+        console.log("Can't crawl main page");
+        return;
+    }
+
     const primarySite = await analysePrimarySite(url, browser, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
         saveReportToJSONFile(primarySite, "./error");
@@ -55,7 +73,10 @@ export const analyseHomePlusDomain = async (url, browser) => {
     filtredLinks = filtredLinks.filter((link) => link.href.charAt(0) == '/' || link.href.includes(parsedUrl));
     console.log(filtredLinks.length + " links found");
   
-  
+    //links from robots.txt as to be ignored
+
+    const analysedUrls = [];
+
     for(let link of filtredLinks) {
         const fixedLink = fixLink(link.href, parsedUrl);
   
@@ -65,11 +86,19 @@ export const analyseHomePlusDomain = async (url, browser) => {
         }
   
         console.log("Analysing " + fixedLink + " ...")
+
+        const canCrawl = await robots.canCrawl(fixedLink)
+        if(!canCrawl) {
+            console.log("Can't crawl page", fixedLink);
+            continue;
+        }
+
         try {
-            const resultSecondarySite = await analyseSecondarySite(fixedLink, browser, {technologyReport: false, dontClosePage: false});
+            const resultSecondarySite = await getReportForURLParallel(fixedLink, browser, {technologyReport: false, dontClosePage: false, analysedUrls: analysedUrls});
             if(resultSecondarySite.error) {
                 saveReportToJSONFile(resultSecondarySite, "./error");
             } else {
+                analysedUrls.push(resultSecondarySite.url);
                 if(resultSecondarySite.url.includes(parsedUrl)) {
                     saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
                     delete resultSecondarySite.html;

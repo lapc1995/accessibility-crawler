@@ -10,3 +10,7 @@ screenshot*
 /dataTest
 /errorTest
 testData.zip
+
+top1MillionDomCop11-04-23.csv
+top10milliondomains.csv
+.gitignore
