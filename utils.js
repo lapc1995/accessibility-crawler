@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import jsonfile from 'jsonfile';
 import csvParser from 'csv-parser';
+import archiver from 'archiver';
 
 export const forbiddenFilenameCharacters = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
@@ -96,3 +97,21 @@ export const reduceFilenameSize = (filename) => {
     }
     return filename;
 }
+
+export const zipDomainFolder = async(dir) => {
+    console.log("Zipping folder", dir);
+    const archive = archiver('zip', { zlib: { level: 9 }});
+    const stream = fs.createWriteStream(`./${dir}.zip`);
+  
+    return new Promise((resolve, reject) => {
+      archive
+        .directory(dir, false)
+        .on('error', err => reject(err))
+        .pipe(stream)
+      ;
+  
+      stream.on('close', () => resolve());
+      archive.finalize();
+    });
+}
+  

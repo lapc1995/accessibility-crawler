@@ -5,8 +5,11 @@ import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, fo
 
 
 import * as readline from 'readline';
+
+/*
 readline.emitKeypressEvents(process.stdin);
 if (process.stdin.isTTY) process.stdin.setRawMode(true);
+*/
 
 const analyseECommerceSiteManually = async (dirname, url, browser, t, cookies, company) => {
     const primarySite = await analyseECommerceSite(url, browser, t, cookies, company) ;

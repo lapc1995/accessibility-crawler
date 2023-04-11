@@ -223,7 +223,11 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         }
   
         if(!options.dontClosePage) {
-            await page.close();
+            try {
+                await withTimeout(page.close(), maxTimeout);
+            } catch (e) {
+                console.log(e)
+            }
         } 
    
         if(options.dontClosePage){

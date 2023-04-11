@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters} from './../utils.js';
 import { analysePrimarySite, analyseSecondarySite } from '../analyser.js'
 
-
 export const analyseHomePlusDomain = async (url, browser) => {
 
     console.log(url);
