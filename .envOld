@@ -1,0 +1,8 @@
+MODE="server"
+URL="https://shop.stereogum.com/"
+CSVFILEPATH="Salesforce-Commerce-Cloud-websites-in-the-United-Kingdom.csv"
+SERVER_URL="http://localhost:1337/parse"
+APP_ID="myAppId"
+MASTER_KEY="test"
+
+CONTEXT="single"
