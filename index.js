@@ -42,6 +42,7 @@ import { analyseHomePlusDomain } from './contexts/homeplus.js';
 import { analyseECommerceDomainManually } from './contexts/manual.js';
 import { analyseSingleDomain } from './contexts/single.js';
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 let chunkSize = 5;
 

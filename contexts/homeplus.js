@@ -43,15 +43,19 @@ export const analyseHomePlusDomain = async (url, browser) => {
     }
     
     console.log("Analysing " + url + " ...")
-    await robots.useRobotsFor(url);
-    await robots.useRobotsFor(url);
+    try {
+        await robots.useRobotsFor(url);
+        await robots.useRobotsFor(url);
 
-    const canCrawlMain = await robots.canCrawl(url)
-    if(!canCrawlMain) {
-        console.log("Can't crawl main page");
-        return;
+        const canCrawlMain = await robots.canCrawl(url)
+        if(!canCrawlMain) {
+            console.log("Can't crawl main page");
+            return;
+        }
+    } catch(e) {
+        console.log(e);
     }
-
+   
     const primarySite = await analysePrimarySite(url, browser, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
         saveReportToJSONFile(primarySite, "./error");
@@ -97,10 +101,14 @@ export const analyseHomePlusDomain = async (url, browser) => {
   
         console.log("Analysing " + fixedLink + " ...")
 
-        const canCrawl = await robots.canCrawl(fixedLink)
-        if(!canCrawl) {
-            console.log("Can't crawl page", fixedLink);
-            continue;
+        try {
+            const canCrawl = await robots.canCrawl(fixedLink)
+            if(!canCrawl) {
+                console.log("Can't crawl page", fixedLink);
+                continue;
+            }
+        } catch(e) {
+            console.log(e);
         }
 
         try {
