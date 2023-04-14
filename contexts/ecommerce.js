@@ -1,5 +1,6 @@
 import * as fs from 'fs';
-import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, forbiddenFilenameCharacters, delay } from './../utils.js';
+import puppeteer from 'puppeteer';
+import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, forbiddenFilenameCharacters, delay, hasInvalidExtension } from './../utils.js';
 import { getReportForURLParallel, getALinks } from '../analyser.js'
 
 export const analyseECommerceSite = async (url, browser, dontClosePage, cookies = null, company = null) => {
@@ -99,7 +100,7 @@ export const analyseECommerceDomain = async (url, browser, options) => {
     let foundPageLink = false;
     for(let link of primarySite.data.alinks) {
         if((link.href.includes('/product/') || link.href.includes('/products/')) && !link.href.includes('gift')) {
-            const tempPage = await browser.newPage();
+            const tempPage = await createNewTempPage(browser);
             const tempLink = fixLink(link.href, url);
             await tempPage.goto(tempLink);
             //await tempPage.waitForNavigation();
@@ -132,7 +133,7 @@ export const analyseECommerceDomain = async (url, browser, options) => {
                     for(let link of alinks) {
                         var re = new RegExp(`${pageLink}\/.+`);
                         if(re.test(link.href)) {
-                            const tempPage = await browser.newPage();
+                            const tempPage = await createNewTempPage(browser);
                             await tempPage.setViewport({
                                 width: 1920,
                                 height: 1080,
@@ -159,6 +160,7 @@ export const analyseECommerceDomain = async (url, browser, options) => {
     }
   
     //look at shop
+    
     if(!foundPageLink) {
         let shopLinks = primarySite.data.alinks.filter((link) => link.href.includes('/shop/') );
         shopLinks = removeDuplicateLinks(shopLinks);
@@ -167,7 +169,7 @@ export const analyseECommerceDomain = async (url, browser, options) => {
             if(!re.test(shopLink.href)) {
                 continue;
             }
-            const tempPage = await browser.newPage();
+            const tempPage = await createNewTempPage(browser);
             await tempPage.setViewport({
                 width: 1920,
                 height: 1080,
@@ -176,7 +178,6 @@ export const analyseECommerceDomain = async (url, browser, options) => {
   
             let pageLink = fixLink(shopLink.href, url);
             await tempPage.goto(pageLink);
-            //await tempPage.waitForNavigation();
             const isProductPage = await checkIfPageIsIsProduct(tempPage);
             tempPage.close();
             if(isProductPage) {
@@ -186,7 +187,7 @@ export const analyseECommerceDomain = async (url, browser, options) => {
             }
         }
     }
-  
+
     console.log("didn't find product page link, testing all links")
     if(!foundPageLink) {
         let noRepeatLinks = removeDuplicateLinks(primarySite.data.alinks);
@@ -202,10 +203,10 @@ export const analyseECommerceDomain = async (url, browser, options) => {
             const tempLink = fixLink(link.href, url);
             const count = (tempLink.match(/\//g) || []).length;
             if(!tempLink.includes('gift') && tempLink.includes(url) /*&& count == 3*/) {
-                const tempPage = await browser.newPage();
-                await tempPage.goto(tempLink);
-                const isProductPage = await checkIfPageIsIsProduct(tempPage);
-                tempPage.close();
+                let tempPage2 = await createNewTempPage(browser);
+                await tempPage2.goto(tempLink, {waitUntil: 'networkidle0'});
+                const isProductPage = await checkIfPageIsIsProduct(tempPage2);
+                await tempPage2.close();
                 if(isProductPage) {
                     productPageUrl = tempLink;
                     foundPageLink = true;
@@ -336,7 +337,7 @@ export const analyseECommerceDomain = async (url, browser, options) => {
     let cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies, company);
     if(cartResult.error){
         if(cartResult.error == "404") {
-            var cartLinks = primarySite.data.alinks.filter((link) => (link.href.includes('/cart')));
+            var cartLinks = primarySite.data.alinks.filter((link) => (link.href.includes('/cart') || link.href.includes('/basket') || link.href.includes('/checkout')));
             if(cartLinks.length > 0) {
                 cartUrl = fixLink(cartLinks[0].href, url);
                 cartResult = await analyseECommerceSite(cartUrl, browser, true, cookies, company);
@@ -667,3 +668,40 @@ const checkAddToCartText = (text) => {
     return false;
 }
   
+
+const createNewTempPage = async (browser) => {
+
+    const page = await browser.newPage();
+
+    page.setRequestInterception(true);
+    page.on('request', async (request) => {
+        if ((request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf')) ||   hasInvalidExtension(request.url().toLowerCase())) {
+            request.abort('blockedbyclient')
+            return;
+        }
+
+        if (request.frame() !== page.mainFrame() ||
+            request.resourceType() === 'image') {
+            request.abort('blockedbyclient')
+            return;
+        }
+
+        if(request.resourceType() == "script") {
+            if(request.url().includes("pixlee")) {
+                request.abort('blockedbyclient');
+                return;
+            }
+        }
+
+        request.continue();
+    }); 
+    
+    page.on('response', async (response) => {
+        const headers = response.headers();
+        if(headers['content-type'] == "application/pdf") {
+            return;
+        }
+    });
+
+    return page;
+}

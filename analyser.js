@@ -82,11 +82,20 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
   
         let site = null;
         page.setRequestInterception(true);
+
         page.on('request', async (request) => {
-            if ((request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf')) ||   hasInvalidExtension(request.url().toLowerCase())) {
+            if ((request.resourceType() == 'document' && request.url().toLowerCase().includes('pdf')) ||  hasInvalidExtension(request.url().toLowerCase()) || request.resourceType() == 'image') {
                 request.abort('blockedbyclient')
                 return;
             }
+
+            if(request.resourceType() == "script") {
+                if(request.url().includes("pixlee")) {
+                    request.abort('blockedbyclient');
+                    return;
+                }
+            }
+
             await site.OnRequest(request, page);
         }); 
         

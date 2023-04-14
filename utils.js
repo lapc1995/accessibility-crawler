@@ -126,6 +126,27 @@ export const reduceFilenameSize = (filename) => {
     return filename;
 }
 
+export const zipDataAndErrorFolder = async(name) => {
+    const archive = archiver('zip', { zlib: { level: 9 }});
+    const stream = fs.createWriteStream(`./${name}.zip`);
+
+    const dataPath = './data';
+    const errorPath = './error';
+
+    return new Promise((resolve, reject) => {
+        archive
+          .directory(dataPath, dataPath.split('/').pop())
+          .directory(errorPath, errorPath.split('/').pop())
+          .on('error', err => reject(err))
+          .pipe(stream)
+        ;
+    
+        stream.on('close', () => resolve());
+        archive.finalize();
+      });
+  
+}
+
 export const zipDomainFolder = async(dir) => {
     console.log("Zipping folder", dir);
     const archive = archiver('zip', { zlib: { level: 9 }});
@@ -182,6 +203,20 @@ export const findMatchingLinks = (url, links) => {
     return matchingLinks;
 }
   
+
+export const removeFolders = (folder1Path, folder2Path) => {
+    try {
+        // Remove folder 1
+        fs.rmdirSync(folder1Path, { recursive: true });
+
+        // Remove folder 2
+        fs.rmdirSync(folder2Path, { recursive: true });
+
+        console.log(`Folders ${folder1Path} and ${folder2Path} removed successfully.`);
+    } catch (error) {
+        console.error(`Error removing folders: ${error}`);
+    }
+}
   
   
   
