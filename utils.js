@@ -41,6 +41,9 @@ export const saveReportToJSONFile = async(report, dir = './data') => {
     if (!fs.existsSync(dir)){
         fs.mkdirSync(dir);
     }
+
+    report.filename = report.filename.replaceAll('/', '{');
+
     jsonfile.writeFileSync(`${dir}/${report.filename}.jsonld`, report);
 }
 
