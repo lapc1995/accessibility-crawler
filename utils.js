@@ -206,7 +206,6 @@ export const findMatchingLinks = (url, links) => {
     return matchingLinks;
 }
   
-
 export const removeFolders = (folder1Path, folder2Path) => {
     try {
         // Remove folder 1
@@ -219,6 +218,40 @@ export const removeFolders = (folder1Path, folder2Path) => {
     } catch (error) {
         console.error(`Error removing folders: ${error}`);
     }
+}
+
+export const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+export const cleanLinkList = (url, links) => {
+
+    let filtredLinks = removeDuplicateLinks(links);
+    let parsedUrl = new URL(url);
+
+    parsedUrl.pathname = '/';
+    parsedUrl.hash = '';
+    parsedUrl.search = '';
+    parsedUrl = parsedUrl.toString();
+    parsedUrl = parsedUrl.replaceAll('https://','');
+
+    filtredLinks = filtredLinks.filter((link) => link.href != null && link.href.length > 1);
+
+    filtredLinks = filtredLinks.filter((link) => (link.href.charAt(0) == '/' && link.href.length > 1) || link.href.includes(parsedUrl) || (!link.href.includes('http') && !link.href.includes('https') && link.href.charAt(0) != '/' && link.href.length > 0 && link.href != ''));
+    filtredLinks = removeNonHTTPSLinks(filtredLinks);
+    
+    filtredLinks = filtredLinks.filter((link) => !hasInvalidExtension(link.href));
+    filtredLinks = filtredLinks.map((link) => {
+        link.href = removeHashFromUrl(link.href);
+        return link;
+    });
+    filtredLinks = removeDuplicateLinks(filtredLinks);
+
+    return filtredLinks;
 }
   
   

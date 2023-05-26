@@ -1,0 +1,91 @@
+{
+    "analysedWebsites": [
+        {
+            "domain": "https://boltonexcellency.co.uk",
+            "toBeAnalysed": [],
+            "analysedPages": []
+        },
+        {
+            "domain": "https://weinfassmoebel.com",
+            "toBeAnalysed": [],
+            "analysedPages": [
+                "https://astrein-vinotheke.de/impressum/",
+                "https://astrein-vinotheke.de/2023/04/01/astreine-oster-weine-und-oeffnungszeiten/",
+                "https://astrein-vinotheke.de/wein-accessoires/",
+                "https://astrein-vinotheke.de/fassmoebel/"
+            ]
+        },
+        {
+            "domain": "https://nic.xyz",
+            "toBeAnalysed": [],
+            "analysedPages": [
+                "https://nic.xyz/contact",
+                "https://gen.xyz/",
+                "https://www.facebook.com/xyz",
+                "https://nic.xyz/termsandconditions"
+            ]
+        },
+        {
+            "domain": "https://math.nist.gov",
+            "toBeAnalysed": [],
+            "analysedPages": [
+                "https://math.nist.gov/tnt/",
+                "https://www.nist.gov/programs-projects/parallel-hierarchical-adaptive-multilevel-project-phaml",
+                "https://math.nist.gov/oommf/",
+                "https://math.nist.gov/~BAlpert/td-em/"
+            ]
+        },
+        {
+            "domain": "https://pctonline.com",
+            "toBeAnalysed": [],
+            "analysedPages": []
+        }
+    ],
+    "currentWebsite": {
+        "domain": "https://etudesafricaines.revues.org",
+        "toBeAnalysed": [
+            "1570",
+            "5800",
+            "http://journals.openedition.org/etudesafricaines/?page=map",
+            "http://journals.openedition.org/jda/12210",
+            "40884",
+            "http://journals.openedition.org/jda/12496",
+            "1569",
+            "20660",
+            "20800",
+            "http://journals.openedition.org/etudesafricaines/?page=backend"
+        ],
+        "analysedPages": [
+            "https://journals.openedition.org/etudesafricaines/1570",
+            "https://journals.openedition.org/etudesafricaines/5800",
+            "https://journals.openedition.org/etudesafricaines/?page=map",
+            "https://journals.openedition.org/jda/12210",
+            "https://journals.openedition.org/etudesafricaines/40884",
+            "https://journals.openedition.org/jda/12496",
+            "https://journals.openedition.org/etudesafricaines/1569",
+            "https://journals.openedition.org/etudesafricaines/20660",
+            "https://journals.openedition.org/etudesafricaines/20800",
+            "https://journals.openedition.org/etudesafricaines/?page=backend",
+            "https://journals.openedition.org/etudesafricaines/6009",
+            "https://journals.openedition.org/etudesafricaines/5408",
+            "https://journals.openedition.org/africanistes/12496",
+            "https://journals.openedition.org/etudesafricaines/6554",
+            "https://journals.openedition.org/etudesafricaines/14205",
+            "https://journals.openedition.org/etudesafricaines/40506",
+            "https://journals.openedition.org/etudesafricaines/6197",
+            "https://journals.openedition.org/etudesafricaines/12673",
+            "https://journals.openedition.org/etudesafricaines/40741",
+            "https://journals.openedition.org/etudesafricaines/4866",
+            "https://journals.openedition.org/etudesafricaines/40974",
+            "https://journals.openedition.org/etudesafricaines/lodel/edition/login.php?url_retour=%2Fetudesafricaines%2Flodel%2Fedition%2F",
+            "https://journals.openedition.org/etudesafricaines/40666",
+            "https://journals.openedition.org/etudesafricaines/6555",
+            "https://journals.openedition.org/africanistes/12526",
+            "https://journals.openedition.org/etudesafricaines/1592",
+            "https://journals.openedition.org/etudesafricaines/1609",
+            "https://journals.openedition.org/etudesafricaines/22226",
+            "https://journals.openedition.org/etudesafricaines/18347",
+            "https://journals.openedition.org/etudesafricaines/40566"
+        ]
+    }
+}

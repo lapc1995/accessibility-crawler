@@ -41,6 +41,7 @@ import { analyseECommerceDomain } from './contexts/ecommerce.js';
 import { analyseHomePlusDomain } from './contexts/homeplus.js';
 import { analyseECommerceDomainManually } from './contexts/manual.js';
 import { analyseSingleDomain } from './contexts/single.js';
+import { analyseLargeScaleDomain } from './contexts/largeScale.js';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
@@ -811,6 +812,8 @@ const runServer = async () => {
     context = analyseSingleDomain;
   } else if(process.env.CONTEXT == "manual") {
     context = analyseECommerceDomainManually;
+  } else if(process.env.CONTEXT == "largescale") {
+    context = analyseLargeScaleDomain;
   }
 
   if(context == null) {
