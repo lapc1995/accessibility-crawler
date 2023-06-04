@@ -7,6 +7,8 @@ import { run as runCSVMode } from './modes/csv.js';
 import { analyseLargeScaleDomain } from './contexts/largeScale.js';
 import { zipDomainFolder,  zipDataAndErrorFolder, removeFolders} from './utils.js';
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const path = './ecommercecsvs/';
 
 let files = fs.readdirSync(path);
