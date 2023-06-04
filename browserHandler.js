@@ -7,7 +7,7 @@ export let waitingForBrowser = false;
 export const initBrowser = async() => {
     browser = false;
     browser = await puppeteer.launch({
-        headless: /*'chrome'*/ false,
+        headless: false,
         ignoreHTTPSErrors: true,
         acceptInsecureCerts: true,
         args: [

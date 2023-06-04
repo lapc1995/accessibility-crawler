@@ -122,9 +122,15 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         let gotoResponse = null;
         try {
             gotoResponse = await page.goto(url, { waitUntil: ['networkidle0']});
-            console.log(gotoResponse)
+
+            if(gotoResponse == null) {
+                console.log("Got null, trying wait.");
+                gotoResponse = await page.waitForResponse(() => true);
+            }
+
             status = `${gotoResponse.status()}`;
-            if(status.charAt(0) == "4" || status.charAt(0) == "5") {
+
+            if(status != null && (status.charAt(0) == "4" || status.charAt(0) == "5")) {
                 await page.close();
                 return {url, error: status, filename: generateFilename(url, Date.now()) };
             }

@@ -126,7 +126,19 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         await contactPage.close();
     }
 
-
+    const phoneHomePage = await getReportForURLParallel(url, browserFromHandler, {technologyReport: false, dontClosePage: false, phone: true});
+    if(phoneHomePage.error) {
+        
+        if(primarySite.error == "Protocol error (Target.createTarget): Target closed.") {
+            await waitForBrowser(browserFromHandler);
+        }
+        saveReportToJSONFile(phoneHomePage, "./error");
+        return;
+    }
+    saveMhtmlToFile(dirname, phoneHomePage.filename, phoneHomePage.mhtml);
+    delete phoneHomePage.html;
+    delete phoneHomePage.mhtml;
+    saveReportToJSONFile(phoneHomePage, dirname);
 
     for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i++) {
 

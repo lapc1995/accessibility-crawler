@@ -1,0 +1,29 @@
+{
+    "analysedWebsites": [
+        {
+            "domain": "https://boltonexcellency.co.uk",
+            "toBeAnalysed": [],
+            "analysedPages": [],
+            "failedAnalysedPages": [],
+            "totalNumberOfPages": 1
+        },
+        {
+            "domain": "https://nic.xyz",
+            "toBeAnalysed": [],
+            "analysedPages": [
+                "https://nic.xyz/contact",
+                "/termsandconditions",
+                "/privacy"
+            ],
+            "failedAnalysedPages": [],
+            "totalNumberOfPages": 7
+        }
+    ],
+    "currentWebsite": {
+        "domain": "https://weinfassmoebel.com",
+        "toBeAnalysed": [],
+        "analysedPages": [],
+        "failedAnalysedPages": [],
+        "totalNumberOfPages": 12
+    }
+}
