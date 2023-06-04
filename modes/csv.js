@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import puppeteer from 'puppeteer';
 import { readWebsiteCSV, saveReportToJSONFile } from './../utils.js';
 import {browser, initBrowser} from '../browserHandler.js'
+import * as db from '../localDatabase.js';
 
 export const run = async (contextFunction) => {
     await initBrowser();
@@ -19,7 +20,31 @@ export const run = async (contextFunction) => {
         fs.mkdirSync("./error");
     }
   
-    const websites = await readWebsiteCSV(csvPath);
+    let websites = await readWebsiteCSV(csvPath);
+
+    //remove websites that are already analysed
+    const analysedWebsites = await db.getAnalysedWebsites();
+    for(let analysedWebsite of analysedWebsites) {
+        let domain = analysedWebsite.domain.replaceAll("https://", "");
+        domain = domain.replaceAll("http://", "");
+        const index = websites.findIndex((website) => website.Domain == domain);
+        if(index != -1) {
+            websites.splice(index, 1);
+        }
+    }
+
+    let currentWebsite = await db.getCurrentWebsite();
+    if(currentWebsite != null) {
+        let domain = currentWebsite.domain.replaceAll("https://", "");
+        domain = domain.replaceAll("http://", "");
+        const index = websites.findIndex((website) => website.Domain == domain);
+        if(index != -1) {
+            let websiteElement = websites[index];
+            websites.splice(index, 1);
+            websites = [websiteElement, ...websites];
+        }
+    }
+
     for(let website of websites) {
 
         var start = new Date();
@@ -34,7 +59,7 @@ export const run = async (contextFunction) => {
             company = website.Company;
         }
         selectedUrl = selectedUrl.replaceAll("*", "");
-  
+
         try {
             await contextFunction(selectedUrl, browser, {company: company});
         }catch(e) {

@@ -28,6 +28,15 @@ export const removeHashFromUrl = (url) => {
     return url;
 }
 
+export const saveMhtmlToFile = async(dir, filename, mhtmlContent) => {
+    try {
+        fs.writeFileSync(`${dir}/${filename}.mhtml`, mhtmlContent);
+        // file written successfully
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 export const saveHtmlToFile = async(dir, filename, htmlContent) => {
     try {
         fs.writeFileSync(`${dir}/${filename}.html`, htmlContent);
@@ -233,15 +242,26 @@ export const cleanLinkList = (url, links) => {
     let filtredLinks = removeDuplicateLinks(links);
     let parsedUrl = new URL(url);
 
+    /*
     parsedUrl.pathname = '/';
     parsedUrl.hash = '';
     parsedUrl.search = '';
     parsedUrl = parsedUrl.toString();
     parsedUrl = parsedUrl.replaceAll('https://','');
+    */
+
+    filtredLinks = filtredLinks.map((link) => {
+        link.href = removeDoubleSlashAtStart(link.href);
+        return link;
+    });
+
+    filtredLinks = filtredLinks.filter((link) => link.href != url);
 
     filtredLinks = filtredLinks.filter((link) => link.href != null && link.href.length > 1);
 
-    filtredLinks = filtredLinks.filter((link) => (link.href.charAt(0) == '/' && link.href.length > 1) || link.href.includes(parsedUrl) || (!link.href.includes('http') && !link.href.includes('https') && link.href.charAt(0) != '/' && link.href.length > 0 && link.href != ''));
+    filtredLinks = filtredLinks.filter((link) => (link.href.charAt(0) == '/' && link.href.length > 1) || 
+                                                  /*link.href.includes(parsedUrl)*/ isSameDomain(link.href, parsedUrl) || 
+                                                 (!link.href.includes('http') && !link.href.includes('https') && link.href.charAt(0) != '/' && link.href.length > 0 && link.href != ''));
     filtredLinks = removeNonHTTPSLinks(filtredLinks);
     
     filtredLinks = filtredLinks.filter((link) => !hasInvalidExtension(link.href));
@@ -249,9 +269,26 @@ export const cleanLinkList = (url, links) => {
         link.href = removeHashFromUrl(link.href);
         return link;
     });
+
     filtredLinks = removeDuplicateLinks(filtredLinks);
 
     return filtredLinks;
+}
+
+export const removeDoubleSlashAtStart = (url) => {
+    if(url.startsWith("//"))
+        return "https:" + url;
+    return url;
+}
+
+export const isSameDomain = (url, domain) => {
+    try {
+        const parsedUrl = new URL(url);
+        return parsedUrl.hostname === domain.hostname;
+    } catch (error) {
+      // Invalid URL, or unable to parse the URL
+      return false;
+    }
 }
   
   

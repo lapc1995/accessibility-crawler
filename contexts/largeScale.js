@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import robotsParser from 'robots-txt-parser';
-import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters, hasInvalidExtension, removeHashFromUrl, delay, removeNonHTTPSLinks, shuffleArray, cleanLinkList} from './../utils.js';
+import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters, hasInvalidExtension, removeHashFromUrl, delay, removeNonHTTPSLinks, shuffleArray, cleanLinkList, isSameDomain, saveMhtmlToFile} from './../utils.js';
 import { analysePrimarySite, analyseSecondarySite, getReportForURLParallel } from '../analyser.js';
 import { waitForBrowser, browser as browserFromHandler } from '../browserHandler.js';
 import * as db from '../localDatabase.js';
@@ -65,26 +65,58 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         return;
     }
 
-    saveHtmlToFile(dirname, primarySite.filename, primarySite.html);
+    //saveHtmlToFile(dirname, primarySite.filename, primarySite.html);
+    saveMhtmlToFile(dirname, primarySite.filename, primarySite.mhtml);
     delete primarySite.html;
+    delete primarySite.mhtml;
     saveReportToJSONFile(primarySite, dirname);
-  
+
     let filtredLinks = cleanLinkList(primarySite.url, primarySite.alinks);
     let parsedUrl = new URL(primarySite.url);
 
     console.log(filtredLinks.length + " links found");
     const analysedUrls = [];
+    analysedUrls.push(primarySite.url);
 
     //analyse 30% of links
     const requiredNumberOfLinks = Math.round(filtredLinks.length * 0.30);
+    const retryAmount = requiredNumberOfLinks;
+    let retryCounter = 0;
+    let successfullLinksCounter = 0;
+
     console.log("Required number of links: " + requiredNumberOfLinks);
     filtredLinks = shuffleArray(filtredLinks);
-    filtredLinks = filtredLinks.slice(0, requiredNumberOfLinks);
-    const justUrls = filtredLinks.map((link) => link.href);
+    
+    //filtredLinks = filtredLinks.slice(0, requiredNumberOfLinks);
+    //const justUrls = filtredLinks.map((link) => link.href);
 
-    await db.setCurrentWebsite(url, justUrls);
+    const isWebsiteCurrent = await db.isWebsiteCurrent(url);
+    if(!isWebsiteCurrent) {
+        await db.setCurrentWebsite(url, [], filtredLinks.length);
+    } else {
+        let currentWebsite = await db.getCurrentWebsite();
+        retryCounter = currentWebsite.failedAnalysedPages.length;
+        successfullLinksCounter = currentWebsite.analysedPages.length;
+        analysedUrls.push(...currentWebsite.analysedPages);
+        filtredLinks = filtredLinks.filter((link) => !analysedUrls.includes(link.href));
 
-    for(let link of filtredLinks) {
+        const toBeAnalysedElements = [];
+        for(let link of currentWebsite.toBeAnalysed) {
+            const index = filtredLinks.findIndex((page) => page.href == link);
+            if(index != -1) {
+                let pageElement = filtredLinks[index];
+                filtredLinks.splice(index, 1);
+                toBeAnalysedElements.push(pageElement);
+            }
+        }
+        filtredLinks = [...toBeAnalysedElements, ...filtredLinks];
+    }
+
+    for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i++) {
+
+        const link = filtredLinks[i];
+
+        await db.addPageToBeAnalysed(link.href);
         
         const fixedLink = fixLink(link.href, primarySite.url);
   
@@ -106,22 +138,31 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         }
 
         try {
-            const resultSecondarySite = await getReportForURLParallel(fixedLink, browserFromHandler, {technologyReport: false, dontClosePage: false, analysedUrls: analysedUrls});
+            const resultSecondarySite = await getReportForURLParallel(fixedLink, browserFromHandler, {technologyReport: false, dontClosePage: false, analysedUrls: analysedUrls, homepageLink: parsedUrl});
             if(resultSecondarySite.error) {
                 if(resultSecondarySite.error == "Protocol error (Target.createTarget): Target closed.") {
                     await waitForBrowser(browserFromHandler);
-                }
-                saveReportToJSONFile(resultSecondarySite, "./error");
+                } 
+                //if (resultSecondarySite.error != "Already analysed") {
+                    saveReportToJSONFile(resultSecondarySite, "./error");
+                    db.setPagetoFailedAnalysedPage(link.href, resultSecondarySite.error);
+                    retryCounter++;
+                //}
             } else {
                 analysedUrls.push(resultSecondarySite.url);
-                await db.setPageToAnalysed(resultSecondarySite.url);
-                if(resultSecondarySite.url.includes(parsedUrl)) {
-                    saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
+                if(isSameDomain(resultSecondarySite.url, parsedUrl)) {
+                    successfullLinksCounter++;
+                    await db.setPageToAnalysed(link.href);
+                    //saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
+                    saveMhtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.mhtml);
                     delete resultSecondarySite.html;
+                    delete resultSecondarySite.mhtml;
                     saveReportToJSONFile(resultSecondarySite, dirname);
                 }
             }
-            await delay(3000);
+
+            const delayTime = Math.floor(Math.random() * (3000 - 1000 + 1) + 1000);
+            await delay(delayTime);
         } catch (error) {
             console.log(error);
             error.link = fixedLink;

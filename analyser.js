@@ -2,7 +2,7 @@ import Wappalyzer from './wappalyzer/drivers/npm/driver.js'
 import puppeteer from 'puppeteer';
 import { generateFilename } from './utils.js';
 import { AxePuppeteer } from '@axe-core/puppeteer';
-import { delay, withTimeout, hasInvalidExtension } from './utils.js';
+import { delay, withTimeout, hasInvalidExtension, isSameDomain } from './utils.js';
 
 
 export const analysePrimarySite = async (url, browser) => {
@@ -47,6 +47,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
             url: null,
             accessibility: null,
             html: null, 
+            mhtml: null,
             externalJavascript: null,
             externalCSS: null,
             images: null,
@@ -117,17 +118,21 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         let gotoResponse = null;
         try {
             gotoResponse = await page.goto(url, { waitUntil: ['networkidle0']});
-            /*
-            if (gotoResponse === null) {
-                console.log("Got null, trying wait.");
-                gotoResponse = await page.waitForResponse(() => true);
-            }*/
             console.log(gotoResponse)
             status = `${gotoResponse.status()}`;
             if(status.charAt(0) == "4" || status.charAt(0) == "5") {
                 await page.close();
                 return {url, error: status, filename: generateFilename(url, Date.now()) };
             }
+
+            if(options.homepageLink) {
+                let currentPage = page.url()
+                if(!isSameDomain(currentPage, options.homepageLink)) {
+                    await page.close();
+                    return {url, error: "Not the same domain", filename: generateFilename(url, Date.now()) };
+                }
+            }
+            
         } catch(e) {
             console.log(e)
             if(e.name == "TimeoutError") {
@@ -189,6 +194,9 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         }
   
         var html = await getHTML(page);
+
+        const cdp = await page.target().createCDPSession();
+        const { data: mhtmlData } = await cdp.send('Page.captureSnapshot', { format: 'mhtml' });
   
         data.date = Date.now();
 
@@ -210,6 +218,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         data.externalJavascript = result[1].status == "fulfilled" ? result[1].value : result[1].reason;
         data.externalCSS = result[2].status == "fulfilled" ? result[2].value : result[2].reason;
         data.html = html;
+        data.mhtml = mhtmlData;
         data.images = result[3].status == "fulfilled" ? result[3].value : result[3].reason;
         data.alinks = result[4].status == "fulfilled" ? result[4].value : result[4].reason;
         data.filename = generateFilename(url, data.date)
@@ -396,10 +405,10 @@ export const getALinks = async(page) => {
     let as = await page.$$('a');
     for (const a of as) {
         var href = await a.evaluate( node => node.getAttribute("href"));
-        if(href == "#" || href == null || href == "javascript: void(0)" || href == "N/A") {
+        if(href == "#" || href == null || href == "javascript: void(0)" || href == "N/A" || href == "/") {
             continue;
         }
-  
+
         var textContent = await a.evaluate( node => node.textContent);
   
         if(textContent != null) {

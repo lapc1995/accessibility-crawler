@@ -17,7 +17,6 @@ dotenv.config()
 
 import { getTechnologies } from './wappalyzerMiddleware.js'
 
-
 import archiver from 'archiver';
 
 import Wappalyzer from './wappalyzer/drivers/npm/driver.js'
