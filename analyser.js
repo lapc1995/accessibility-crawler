@@ -2,8 +2,10 @@ import Wappalyzer from './wappalyzer/drivers/npm/driver.js'
 import puppeteer from 'puppeteer';
 import { generateFilename } from './utils.js';
 import { AxePuppeteer } from '@axe-core/puppeteer';
-import { delay, withTimeout, hasInvalidExtension, isSameDomain } from './utils.js';
+import { delay, withTimeout, hasInvalidExtension, isSameDomain, getPackageVersions } from './utils.js';
 
+
+const packageVersions = getPackageVersions();
 
 export const analysePrimarySite = async (url, browser) => {
     return await getReportForURLParallel(url, browser, {technologyReport: true}) 
@@ -41,6 +43,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         };
   
         const wappalyzer = new Wappalyzer(wappalyzerOptions);
+
   
         let data = {
             originalUrl: null,
@@ -56,6 +59,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
             alinks: null,
             cookies: null,
             totalTimeMillis: null,
+            packageVersions: null,
         }
   
         if(options.technologyReport) {
@@ -226,6 +230,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         data.cssCoverage = result[5].status == "fulfilled" ? result[5].value.cssCoverage : result[5].reason;
         data.cookies = result[6].status == "fulfilled" ? result[6].value : result[6].reason;
         data.totalTimeMillis = Date.now() - startTime;
+        data.packageVersions = packageVersions;
 
         if(options.company) {
             data.company = options.company;

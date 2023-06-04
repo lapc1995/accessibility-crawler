@@ -34,6 +34,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         fs.mkdirSync("./data");
     }
   
+ 
     if(!fs.existsSync(dirname)) {
         fs.mkdirSync(dirname);
     } else {
@@ -79,8 +80,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     analysedUrls.push(primarySite.url);
 
     //analyse 30% of links
-    const requiredNumberOfLinks = Math.round(filtredLinks.length * 0.30);
-    const retryAmount = requiredNumberOfLinks;
+    let requiredNumberOfLinks = Math.round(filtredLinks.length * 0.30);
+    const retryAmount = Math.round(filtredLinks.length * 0.30);
     let retryCounter = 0;
     let successfullLinksCounter = 0;
 
@@ -111,6 +112,21 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         }
         filtredLinks = [...toBeAnalysedElements, ...filtredLinks];
     }
+
+    //check if contact page exists
+    const contactUrl = new URL("contact", primarySite.url);
+    let contactPage = await browserFromHandler.newPage();
+    let contactReponse = await contactPage.goto(contactUrl.href, {waitUntil: 'networkidle2', timeout: 60000});
+    let contactStatus = `${contactReponse.status()}`;
+    if(contactStatus.charAt(0) == "4" || contactStatus.charAt(0) == "5") {
+        await contactPage.close();
+    } else {
+        filtredLinks = [contactUrl, ...filtredLinks];
+        requiredNumberOfLinks++;
+        await contactPage.close();
+    }
+
+
 
     for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i++) {
 

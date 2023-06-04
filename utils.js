@@ -28,7 +28,7 @@ export const removeHashFromUrl = (url) => {
     return url;
 }
 
-export const saveMhtmlToFile = async(dir, filename, mhtmlContent) => {
+export const saveMhtmlToFile = (dir, filename, mhtmlContent) => {
     try {
         fs.writeFileSync(`${dir}/${filename}.mhtml`, mhtmlContent);
         // file written successfully
@@ -37,7 +37,7 @@ export const saveMhtmlToFile = async(dir, filename, mhtmlContent) => {
     }
 }
 
-export const saveHtmlToFile = async(dir, filename, htmlContent) => {
+export const saveHtmlToFile = (dir, filename, htmlContent) => {
     try {
         fs.writeFileSync(`${dir}/${filename}.html`, htmlContent);
         // file written successfully
@@ -289,6 +289,32 @@ export const isSameDomain = (url, domain) => {
       // Invalid URL, or unable to parse the URL
       return false;
     }
+}
+
+const readJsonFile = (filePath) => {
+    try {
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        const jsonData = JSON.parse(fileContent);
+        return jsonData;
+    } catch (error) {
+        console.error(`Error reading JSON file: ${error}`);
+        return null;
+    }
+}
+
+
+export const getPackageVersions = () => {
+
+    const filePath = './package-lock.json';
+    const jsonData = readJsonFile(filePath);
+    if (jsonData) {
+        return {
+            wappalyzer: jsonData.packages['node_modules/wappalyzer']["version"],
+            wappalyzerCore: jsonData.packages['node_modules/wappalyzer-core']["version"],
+            puppeteer: jsonData.packages['node_modules/puppeteer']["version"]
+        }
+    }
+    return {};
 }
   
   
