@@ -72,6 +72,11 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     delete primarySite.mhtml;
     saveReportToJSONFile(primarySite, dirname);
 
+    if(typeof primarySite.alinks === 'string') {
+        console.log("Error: " + primarySite.alinks);
+        return;
+    }
+
     let filtredLinks = cleanLinkList(primarySite.url, primarySite.alinks);
     let parsedUrl = new URL(primarySite.url);
 

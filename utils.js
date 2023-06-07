@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import jsonfile from 'jsonfile';
 import csvParser from 'csv-parser';
 import archiver from 'archiver';
+import * as path from 'path';
 
 export const forbiddenFilenameCharacters = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
@@ -316,6 +317,29 @@ export const getPackageVersions = () => {
     }
     return {};
 }
+
+const removeFolderRecursive = (folderPath) => {
+    if (fs.existsSync(folderPath)) {
+      fs.readdirSync(folderPath).forEach((file) => {
+        const currentPath = path.join(folderPath, file);
+        if (fs.lstatSync(currentPath).isDirectory()) {
+          removeFolderRecursive(currentPath); // Recursive call for subfolders
+        } else {
+          fs.unlinkSync(currentPath); // Delete file
+        }
+      });
+      fs.rmdirSync(folderPath); // Delete empty directory
+      console.log(`Successfully removed folder: ${folderPath}`);
+    } else {
+      console.log(`Folder not found: ${folderPath}`);
+    }
+  }
   
   
+export const eraseFoldersAndDatabase = () => {
+    removeFolderRecursive('./data');
+    removeFolderRecursive('./error');
+    fs.unlinkSync('largeScaleDB.json');
+}
+
   

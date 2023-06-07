@@ -41,6 +41,7 @@ import { analyseHomePlusDomain } from './contexts/homeplus.js';
 import { analyseECommerceDomainManually } from './contexts/manual.js';
 import { analyseSingleDomain } from './contexts/single.js';
 import { analyseLargeScaleDomain } from './contexts/largeScale.js';
+import * as utils from './utils.js';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
@@ -55,6 +56,8 @@ const sliceIntoChunks = (arr, chunkSize) => {
   return res;
 }
 
+
+utils.eraseFoldersAndDatabase();
 
 const startGeneratingReports = async (websites) => {
 
