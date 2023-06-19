@@ -50,6 +50,10 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         const canCrawlMain = await robots.canCrawl(url)
         if(!canCrawlMain) {
             console.log("Can't crawl main page");
+            await db.setCurrentWebsite(url, [], 0);
+            await db.addPageToBeAnalysed(url);
+            await db.setPagetoFailedAnalysedPage(url, "Can't crawl main page");
+            await db.setCurrentWebsiteToAnalysed();
             return;
         }
     } catch(e) {
@@ -58,8 +62,14 @@ export const analyseLargeScaleDomain = async (url, browser) => {
    
     const primarySite = await analysePrimarySite(url, browserFromHandler, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
+
+        await db.setCurrentWebsite(url, [], 0);
+        await db.addPageToBeAnalysed(primarySite.url);
+        await db.setPagetoFailedAnalysedPage(primarySite.url, primarySite.error);
+        await db.setCurrentWebsiteToAnalysed();
         
-        if(primarySite.error == "Protocol error (Target.createTarget): Target closed.") {
+        if(primarySite.error == "Protocol error (Target.createTarget): Target closed." || 
+            primarySite.error == "Navigation failed because browser has disconnected!") {
             await waitForBrowser(browserFromHandler);
         }
         saveReportToJSONFile(primarySite, "./error");
@@ -99,6 +109,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     const isWebsiteCurrent = await db.isWebsiteCurrent(url);
     if(!isWebsiteCurrent) {
         await db.setCurrentWebsite(url, [], filtredLinks.length);
+        await db.addPageToBeAnalysed(primarySite.url);
+        await db.setPageToAnalysed(primarySite.url);
     } else {
         let currentWebsite = await db.getCurrentWebsite();
         retryCounter = currentWebsite.failedAnalysedPages.length;
@@ -118,23 +130,13 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         filtredLinks = [...toBeAnalysedElements, ...filtredLinks];
     }
 
-    //check if contact page exists
-    const contactUrl = new URL("contact", primarySite.url);
-    let contactPage = await browserFromHandler.newPage();
-    let contactReponse = await contactPage.goto(contactUrl.href, {waitUntil: 'networkidle2', timeout: 60000});
-    let contactStatus = `${contactReponse.status()}`;
-    if(contactStatus.charAt(0) == "4" || contactStatus.charAt(0) == "5") {
-        await contactPage.close();
-    } else {
-        filtredLinks = [contactUrl, ...filtredLinks];
-        requiredNumberOfLinks++;
-        await contactPage.close();
-    }
-
+    //phone page
     const phoneHomePage = await getReportForURLParallel(url, browserFromHandler, {technologyReport: false, dontClosePage: false, phone: true});
     if(phoneHomePage.error) {
-        
-        if(primarySite.error == "Protocol error (Target.createTarget): Target closed.") {
+        await db.addPageToBeAnalysed(phoneHomePage.url + "phone");
+        await db.setPagetoFailedAnalysedPage(phoneHomePage.url + "phone", phoneHomePage.error);
+        if(primarySite.error == "Protocol error (Target.createTarget): Target closed." ||
+           primarySite.error == "Navigation failed because browser has disconnected!") {
             await waitForBrowser(browserFromHandler);
         }
         saveReportToJSONFile(phoneHomePage, "./error");
@@ -144,6 +146,30 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     delete phoneHomePage.html;
     delete phoneHomePage.mhtml;
     saveReportToJSONFile(phoneHomePage, dirname);
+    await db.addPageToBeAnalysed(phoneHomePage.url + "(phone)");
+    await db.setPageToAnalysed(phoneHomePage.url + "(phone)");
+
+
+
+    //check if contact page exists
+    try {
+        const contactUrl = new URL("contact", primarySite.url);
+        let contactPage = await browserFromHandler.newPage();
+        let contactReponse = await contactPage.goto(contactUrl.href, {waitUntil: 'networkidle2', timeout: 30000});
+        let contactStatus = `${contactReponse.status()}`;
+        if(contactStatus.charAt(0) == "4" || contactStatus.charAt(0) == "5") {
+            await contactPage.close();
+        } else {
+            filtredLinks = [contactUrl, ...filtredLinks];
+            requiredNumberOfLinks++;
+            await contactPage.close();
+        }
+    } catch(e) {
+        if(e.message == "Protocol error (Target.createTarget): Target closed." ||
+            e.message == "Navigation failed because browser has disconnected!") {
+            await waitForBrowser(browserFromHandler);
+        }
+    }
 
     for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i++) {
 
@@ -164,6 +190,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             const canCrawl = await robots.canCrawl(fixedLink)
             if(!canCrawl) {
                 console.log("Can't crawl page", fixedLink);
+                await db.setPagetoFailedAnalysedPage(fixedLink, "Can't crawl page");
                 continue;
             }
         } catch(e) {

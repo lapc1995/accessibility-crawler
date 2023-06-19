@@ -5,6 +5,8 @@ export let browser;
 export let waitingForBrowser = false;
 
 export const initBrowser = async() => {
+    //await closeBrowser();
+    browser = false;
     browser = await puppeteer.launch({
         headless: process.env.HEADLESS == 1 ? 'chrome' : false,
         ignoreHTTPSErrors: true,
@@ -21,6 +23,7 @@ export const initBrowser = async() => {
     });
     browser.on('disconnected', async() => {
         console.log("Browser disconnected");
+        browser = false;
         await initBrowser();
     });
     return browser;

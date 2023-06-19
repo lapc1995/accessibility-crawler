@@ -1,1 +1,32 @@
-{}
+{
+    "analysedWebsites": [
+        {
+            "domain": "https://youtube.com",
+            "toBeAnalysed": [],
+            "analysedPages": [],
+            "failedAnalysedPages": [
+                {
+                    "url": "https://youtube.com",
+                    "error": "Navigation failed because browser has disconnected!"
+                }
+            ],
+            "totalNumberOfPages": 0
+        }
+    ],
+    "currentWebsite": {
+        "domain": "https://support.google.com",
+        "toBeAnalysed": [
+            "/authorizedbuyers/?hl=en"
+        ],
+        "analysedPages": [
+            "https://support.google.com/",
+            "https://support.google.com/(phone)",
+            "/android/?hl=en",
+            "/reserve/?hl=en",
+            "/adscreativestudio/?hl=en",
+            "/stadia/?hl=en"
+        ],
+        "failedAnalysedPages": [],
+        "totalNumberOfPages": 146
+    }
+}

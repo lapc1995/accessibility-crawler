@@ -26,14 +26,14 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         const startTime = Date.now();
   
         const wappalyzerOptions = {
-            debug: true,
+            debug: false,
             delay: 500,
             headers: {},
             maxDepth: 3,
             maxUrls: 1,
-            maxWait: 30000,
+            maxWait: 60000,
             recursive: true,
-            probe: true,
+            probe: false,
             proxy: false,
             userAgent: 'Wappalyzer',
             htmlMaxCols: 2000,
@@ -166,17 +166,15 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
                     }
                     return {url, error: e.message, filename: generateFilename(url, Date.now()) }
                 }
-            } else {
-                try {
-                    if(e.message != "Navigation failed because browser has disconnected!") {
-                        //if closing happens to fast the program will forever hang???
-                        await delay(5000);
-                        await page.close();
-                    }
-                } catch(e) {
-                    console.log(e);
+            } else {           
+                if(e.message != "Navigation failed because browser has disconnected!") {
+                    //if closing happens to fast the program will forever hang???
+                    await delay(5000);
+                    await page.close();
                 }
-      
+                else {
+                    throw e;
+                }
                 return {url, error: e.message, filename: generateFilename(url, Date.now()) };
             } 
         }
@@ -206,13 +204,12 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         var html = await getHTML(page);
 
         const cdp = await page.target().createCDPSession();
-        const { data: mhtmlData } = await cdp.send('Page.captureSnapshot', { format: 'mhtml' });
-  
+       
         data.date = Date.now();
 
         const maxTimeout = 30000;
 
-        const tasks = [withTimeout(getAccessibilityReport(page), maxTimeout), withTimeout(getExternalJavacript(page), maxTimeout), withTimeout(getExternalCSS(page), maxTimeout), withTimeout(getImages(page), maxTimeout), withTimeout(getALinks(page), maxTimeout), withTimeout(stopCoverage(page), maxTimeout), withTimeout(getCookies(page), maxTimeout)];
+        const tasks = [withTimeout(getAccessibilityReport(page), maxTimeout), withTimeout(getExternalJavacript(page), maxTimeout), withTimeout(getExternalCSS(page), maxTimeout), withTimeout(getImages(page), maxTimeout), withTimeout(getALinks(page), maxTimeout), withTimeout(stopCoverage(page), maxTimeout), withTimeout(getCookies(page), maxTimeout), withTimeout(getPageSnapshot(cdp), maxTimeout)];
 
         if(options.technologyReport) {
             tasks.push(site.analyze(page));
@@ -228,13 +225,13 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         data.externalJavascript = result[1].status == "fulfilled" ? result[1].value : result[1].reason;
         data.externalCSS = result[2].status == "fulfilled" ? result[2].value : result[2].reason;
         data.html = html;
-        data.mhtml = mhtmlData;
         data.images = result[3].status == "fulfilled" ? result[3].value : result[3].reason;
         data.alinks = result[4].status == "fulfilled" ? result[4].value : result[4].reason;
         data.filename = generateFilename(url, data.date)
         data.jsCoverage = result[5].status == "fulfilled" ? result[5].value.jsCoverage : result[5].reason;
         data.cssCoverage = result[5].status == "fulfilled" ? result[5].value.cssCoverage : result[5].reason;
         data.cookies = result[6].status == "fulfilled" ? result[6].value : result[6].reason;
+        data.mhtml = result[7].status == "fulfilled" ? result[7].value : result[7].reason;
         data.totalTimeMillis = Date.now() - startTime;
         data.packageVersions = packageVersions;
 
@@ -242,8 +239,8 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
             data.company = options.company;
         }
   
-        if(options.technologyReport && result[7] != null) {
-            data.technologies = result[7].status == "fulfilled" ? cleanTechnologyReport(result[7].value.technologies) : result[7].reason;
+        if(options.technologyReport && result[8] != null) {
+            data.technologies = result[8].status == "fulfilled" ? cleanTechnologyReport(result[8].value.technologies) : result[8].reason;
         }
   
         if(options.phone) {
@@ -270,6 +267,10 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
     }  
 }
 
+const getPageSnapshot = async(cdp) => {
+    const { data: mhtmlData } = await cdp.send('Page.captureSnapshot', { format: 'mhtml' });
+    return mhtmlData;
+}
 
 const getCookies = async(page) => {
     const cookies = await page.cookies();
