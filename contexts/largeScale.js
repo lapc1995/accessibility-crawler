@@ -14,6 +14,8 @@ const robots = robotsParser(
 
 export const analyseLargeScaleDomain = async (url, browser) => {
 
+    await waitForBrowser();
+
     if(!url.includes('http')) {
       url = `https://${url}`;
     }
@@ -40,6 +42,17 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     } else {
         //console.log("Directory already exists => " + dirname);
         //return;
+    }
+
+    const dataFolder = `${dirname}/data`;
+    const errorFolder = `${dirname}/error`;
+
+    if(!fs.existsSync(dataFolder)) {
+        fs.mkdirSync(dataFolder);
+    }
+
+    if(!fs.existsSync(errorFolder)) {
+        fs.mkdirSync(errorFolder);
     }
     
     console.log("Analysing " + url + " ...")
@@ -72,15 +85,15 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             primarySite.error == "Navigation failed because browser has disconnected!") {
             await waitForBrowser(browserFromHandler);
         }
-        saveReportToJSONFile(primarySite, "./error");
+        saveReportToJSONFile(primarySite, errorFolder);
         return;
     }
 
     //saveHtmlToFile(dirname, primarySite.filename, primarySite.html);
-    saveMhtmlToFile(dirname, primarySite.filename, primarySite.mhtml);
+    saveMhtmlToFile(dataFolder, primarySite.filename, primarySite.mhtml);
     delete primarySite.html;
     delete primarySite.mhtml;
-    saveReportToJSONFile(primarySite, dirname);
+    saveReportToJSONFile(primarySite, dataFolder);
 
     if(typeof primarySite.alinks === 'string') {
         console.log("Error: " + primarySite.alinks);
@@ -96,7 +109,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
 
     //analyse 30% of links
     let requiredNumberOfLinks = Math.round(filtredLinks.length * 0.30);
-    const retryAmount = Math.round(filtredLinks.length * 0.30);
+    const retryAmount = Math.round(filtredLinks.length * 0.23);
     let retryCounter = 0;
     let successfullLinksCounter = 0;
 
@@ -139,13 +152,13 @@ export const analyseLargeScaleDomain = async (url, browser) => {
            primarySite.error == "Navigation failed because browser has disconnected!") {
             await waitForBrowser(browserFromHandler);
         }
-        saveReportToJSONFile(phoneHomePage, "./error");
+        saveReportToJSONFile(phoneHomePage, errorFolder);
         return;
     }
-    saveMhtmlToFile(dirname, phoneHomePage.filename, phoneHomePage.mhtml);
+    saveMhtmlToFile(dataFolder, phoneHomePage.filename, phoneHomePage.mhtml);
     delete phoneHomePage.html;
     delete phoneHomePage.mhtml;
-    saveReportToJSONFile(phoneHomePage, dirname);
+    saveReportToJSONFile(phoneHomePage, dataFolder);
     await db.addPageToBeAnalysed(phoneHomePage.url + "(phone)");
     await db.setPageToAnalysed(phoneHomePage.url + "(phone)");
 
@@ -179,7 +192,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         
         const fixedLink = fixLink(link.href, primarySite.url);
   
-        let filename = dirname + "/" + generateFilename(fixedLink) + ".jsonld";
+        let filename = dataFolder + "/" + generateFilename(fixedLink) + ".jsonld";
         if(fs.existsSync(filename)) {
             continue;
         }
@@ -203,21 +216,24 @@ export const analyseLargeScaleDomain = async (url, browser) => {
                 if(resultSecondarySite.error == "Protocol error (Target.createTarget): Target closed.") {
                     await waitForBrowser(browserFromHandler);
                 } 
-                //if (resultSecondarySite.error != "Already analysed") {
-                    saveReportToJSONFile(resultSecondarySite, "./error");
-                    db.setPagetoFailedAnalysedPage(link.href, resultSecondarySite.error);
+
+                saveReportToJSONFile(resultSecondarySite, errorFolder);
+                db.setPagetoFailedAnalysedPage(link.href, resultSecondarySite.error);
+                   
+                if(resultSecondarySite.error != "Already analysed") {
                     retryCounter++;
-                //}
+                }
+
             } else {
                 analysedUrls.push(resultSecondarySite.url);
                 if(isSameDomain(resultSecondarySite.url, parsedUrl)) {
                     successfullLinksCounter++;
                     await db.setPageToAnalysed(link.href);
                     //saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
-                    saveMhtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.mhtml);
+                    saveMhtmlToFile(dataFolder, resultSecondarySite.filename, resultSecondarySite.mhtml);
                     delete resultSecondarySite.html;
                     delete resultSecondarySite.mhtml;
-                    saveReportToJSONFile(resultSecondarySite, dirname);
+                    saveReportToJSONFile(resultSecondarySite, dataFolder);
                 }
             }
 

@@ -57,7 +57,7 @@ const sliceIntoChunks = (arr, chunkSize) => {
 }
 
 
-utils.eraseFoldersAndDatabase();
+//utils.eraseFoldersAndDatabase();
 
 const startGeneratingReports = async (websites) => {
 

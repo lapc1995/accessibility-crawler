@@ -284,6 +284,9 @@ export const removeDoubleSlashAtStart = (url) => {
 
 export const isSameDomain = (url, domain) => {
     try {
+        if(domain.hostname.startsWith("www.") && !url.startsWith("www.")) {
+            url = "www." + url;
+        }
         const parsedUrl = new URL(url);
         return parsedUrl.hostname === domain.hostname;
     } catch (error) {

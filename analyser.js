@@ -23,6 +23,9 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
 
     try {
 
+        let userAgent = await browser.userAgent()
+        userAgent += " crawled for https://luiscarvalho.dev/accessibilityStudy/"
+
         const startTime = Date.now();
   
         const wappalyzerOptions = {
@@ -31,7 +34,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
             headers: {},
             maxDepth: 3,
             maxUrls: 1,
-            maxWait: 60000,
+            maxWait: 120000,
             recursive: true,
             probe: false,
             proxy: false,
@@ -73,7 +76,8 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         }
   
         const page = await browser.newPage();
-  
+        await page.setUserAgent(userAgent);
+    
         if(options.cookies) {
             await page.setCookie(...options.cookies);
         }   
@@ -208,8 +212,8 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         data.date = Date.now();
 
         const maxTimeout = 30000;
-
-        const tasks = [withTimeout(getAccessibilityReport(page), maxTimeout), withTimeout(getExternalJavacript(page), maxTimeout), withTimeout(getExternalCSS(page), maxTimeout), withTimeout(getImages(page), maxTimeout), withTimeout(getALinks(page), maxTimeout), withTimeout(stopCoverage(page), maxTimeout), withTimeout(getCookies(page), maxTimeout), withTimeout(getPageSnapshot(cdp), maxTimeout)];
+ 
+        const tasks = [/*withTimeout(getAccessibilityReport(page), maxTimeout)*/{},withTimeout(getExternalJavacript(page), maxTimeout), withTimeout(getExternalCSS(page), maxTimeout), withTimeout(getImages(page), maxTimeout), withTimeout(getALinks(page), maxTimeout), withTimeout(stopCoverage(page), maxTimeout), withTimeout(getCookies(page), maxTimeout), withTimeout(getPageSnapshot(cdp), maxTimeout)];
 
         if(options.technologyReport) {
             tasks.push(site.analyze(page));
@@ -217,11 +221,19 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
   
         var result = await Promise.allSettled(tasks);
 
+        let accessibilityReport = null;
+        try {
+            accessibilityReport = await withTimeout(getAccessibilityReport(page), maxTimeout);
+        } catch(e) {
+            console.log(e);
+        }
+   
+
         data["@context"] = "http://luiscarvalho.dev/contexts/",
         data["@type"] = "pageReport"
         data.originalUrl = url;
         data.url = page.url(),
-        data.accessibility = result[0].status == "fulfilled" ? result[0].value : result[0].reason;
+        data.accessibility = accessibilityReport//result[0].status == "fulfilled" ? result[0].value : result[0].reason;
         data.externalJavascript = result[1].status == "fulfilled" ? result[1].value : result[1].reason;
         data.externalCSS = result[2].status == "fulfilled" ? result[2].value : result[2].reason;
         data.html = html;
@@ -252,6 +264,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
                 await withTimeout(page.close(), maxTimeout);
             } catch (e) {
                 console.log(e);
+                await browser.close();
             }
         } 
    

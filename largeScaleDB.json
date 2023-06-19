@@ -1,32 +1,18 @@
 {
-    "analysedWebsites": [
-        {
-            "domain": "https://youtube.com",
-            "toBeAnalysed": [],
-            "analysedPages": [],
-            "failedAnalysedPages": [
-                {
-                    "url": "https://youtube.com",
-                    "error": "Navigation failed because browser has disconnected!"
-                }
-            ],
-            "totalNumberOfPages": 0
-        }
-    ],
     "currentWebsite": {
-        "domain": "https://support.google.com",
+        "domain": "https://facebook.com",
         "toBeAnalysed": [
-            "/authorizedbuyers/?hl=en"
+            "/privacy/policy/?entry_point=facebook_page_footer"
         ],
         "analysedPages": [
-            "https://support.google.com/",
-            "https://support.google.com/(phone)",
-            "/android/?hl=en",
-            "/reserve/?hl=en",
-            "/adscreativestudio/?hl=en",
-            "/stadia/?hl=en"
+            "https://www.facebook.com/",
+            "https://m.facebook.com/?wtsid=rdr_0Q9LL4TZ9pY24uhS4(phone)",
+            "https://www.facebook.com/contact",
+            "/fundraisers/",
+            "/settings",
+            "/lite/"
         ],
         "failedAnalysedPages": [],
-        "totalNumberOfPages": 146
+        "totalNumberOfPages": 29
     }
 }
