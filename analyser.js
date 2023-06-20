@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 import { generateFilename } from './utils.js';
 import { AxePuppeteer } from '@axe-core/puppeteer';
 import { delay, withTimeout, hasInvalidExtension, isSameDomain, getPackageVersions } from './utils.js';
-
+import { waitForBrowser as browserFromHandler } from '../browserHandler.js';
 
 const packageVersions = getPackageVersions();
 
@@ -22,6 +22,8 @@ export const analysePhoneSite = async (url, browser) => {
 export const getReportForURLParallel = async(url, browser, options = {}) => {
 
     try {
+
+        await waitForBrowser();
 
         let userAgent = await browser.userAgent()
         userAgent += " crawled for https://luiscarvalho.dev/accessibilityStudy/"
