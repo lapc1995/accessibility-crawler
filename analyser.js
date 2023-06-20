@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 import { generateFilename } from './utils.js';
 import { AxePuppeteer } from '@axe-core/puppeteer';
 import { delay, withTimeout, hasInvalidExtension, isSameDomain, getPackageVersions } from './utils.js';
-import { waitForBrowser as browserFromHandler } from '../browserHandler.js';
+import { waitForBrowser } from './browserHandler.js';
 
 const packageVersions = getPackageVersions();
 
