@@ -4,6 +4,7 @@ import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, ge
 import { analysePrimarySite, analyseSecondarySite, getReportForURLParallel } from '../analyser.js';
 import { waitForBrowser, browser as browserFromHandler } from '../browserHandler.js';
 import * as db from '../localDatabase.js';
+import * as largeWebsitesDB from '../largeWebsitesDatabase.js';
 
 const robots = robotsParser(
 {
@@ -72,8 +73,31 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     } catch(e) {
         console.log(e);
     }
+
+    //check that is home page
+    await waitForBrowser();
+
+    let testHomePage = await browserFromHandler.newPage();
+    let testHomePageResult = await testHomePage.goto(url, {waitUntil: 'networkidle2', timeout: 30000});
+    if(testHomePageResult == null) {
+        console.log("Got null, trying wait.");
+        testHomePageResult = await testHomePage.waitForResponse(() => true);
+    }
+    
+    let testHomePageStatus = `${testHomePageResult.status()}`;
+
+    if(testHomePageStatus != null && (testHomePageStatus.charAt(0) == "4" || testHomePageStatus.charAt(0) == "5")) {
+        await testHomePage.close();
+        return {url, error: testHomePageStatus, filename: generateFilename(url, Date.now()) };
+    }
+
+    let homeURL = testHomePageResult.url();
+    await testHomePage.close();
+    homeURL = new URL(homeURL);
+
+    console.log(url,homeURL.host)
    
-    const primarySite = await analysePrimarySite(url, browserFromHandler, {technologyReport: true, dontClosePage: false});
+    const primarySite = await analysePrimarySite(homeURL.host, browserFromHandler, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
 
         await db.setCurrentWebsite(url, [], 0);
@@ -107,8 +131,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     const analysedUrls = [];
     analysedUrls.push(primarySite.url);
 
-    //analyse 30% of links
-    let requiredNumberOfLinks = Math.round(filtredLinks.length * 0.30);
+    //analyse 20% of links
+    let requiredNumberOfLinks = Math.round(filtredLinks.length * 0.20);
     const retryAmount = Math.round(filtredLinks.length * 0.23);
     let retryCounter = 0;
     let successfullLinksCounter = 0;
@@ -143,6 +167,16 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         filtredLinks = [...toBeAnalysedElements, ...filtredLinks];
     }
 
+
+    if(filtredLinks.length > 100) {
+        largeWebsitesDB.addLargeWebsite(url, filtredLinks.length);
+        await db.setCurrentWebsiteToAnalysed();
+        return;
+    } else if(filtredLinks.length < 11) {
+        requiredNumberOfLinks = filtredLinks.length;
+        retryAmount = filtredLinks.length
+    }
+
     //phone page
     const phoneHomePage = await getReportForURLParallel(url, browserFromHandler, {technologyReport: false, dontClosePage: false, phone: true});
     if(phoneHomePage.error) {
@@ -161,8 +195,6 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     saveReportToJSONFile(phoneHomePage, dataFolder);
     await db.addPageToBeAnalysed(phoneHomePage.url + "(phone)");
     await db.setPageToAnalysed(phoneHomePage.url + "(phone)");
-
-
 
     //check if contact page exists
     try {

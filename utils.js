@@ -3,6 +3,7 @@ import jsonfile from 'jsonfile';
 import csvParser from 'csv-parser';
 import archiver from 'archiver';
 import * as path from 'path';
+import psl from 'psl';
 
 export const forbiddenFilenameCharacters = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
@@ -199,6 +200,31 @@ export const withTimeout = async (promise, millis) => {
         timeoutPromise
     ]);
 }
+
+export const withTimeoutAndParameters = async (promise, parameters, millis) => {
+    let timer = null;
+
+    const timeoutPromise = new Promise((resolve, reject) => {
+      timer = setTimeout(() => reject('Timeout after ' + millis + 'ms'), millis);
+    });
+
+    const runningPromise = new Promise((resolve, reject) => {
+        promise(parameters).then((value) => {
+            clearTimeout(timer);
+            resolve(value);
+        }).catch((error) => {
+            clearTimeout(timer);
+            reject(error.message);
+        })
+    });
+
+    return Promise.race([
+        runningPromise,
+        timeoutPromise
+    ]);
+}
+
+
   
 export const findMatchingLinks = (url, links) => {
     const domainRegex = /^((?:https?:)?\/\/)?([^:\/\n?]+)(?:\/.*)?$/im;
@@ -283,16 +309,24 @@ export const removeDoubleSlashAtStart = (url) => {
 }
 
 export const isSameDomain = (url, domain) => {
+
     try {
-        if(domain.hostname.startsWith("www.") && !url.startsWith("www.")) {
-            url = "www." + url;
-        }
-        const parsedUrl = new URL(url);
-        return parsedUrl.hostname === domain.hostname;
+    console.log(url);
+    url = new URL(url);
     } catch (error) {
-      // Invalid URL, or unable to parse the URL
-      return false;
+        console.log(error)
+        return false
     }
+
+    let parsedUrl = psl.parse(url.hostname);
+    let parsedDomain = psl.parse(domain.hostname);
+
+    if(parsedUrl.error || parsedDomain.error) {
+        console.log("Error parsing URL or domain", parsedUrl, parsedDomain);
+        return false;
+    }
+    
+    return parsedUrl.domain == parsedDomain.domain;
 }
 
 const readJsonFile = (filePath) => {

@@ -1,18 +1,22 @@
 {
-    "currentWebsite": {
-        "domain": "https://facebook.com",
-        "toBeAnalysed": [
-            "/privacy/policy/?entry_point=facebook_page_footer"
-        ],
-        "analysedPages": [
-            "https://www.facebook.com/",
-            "https://m.facebook.com/?wtsid=rdr_0Q9LL4TZ9pY24uhS4(phone)",
-            "https://www.facebook.com/contact",
-            "/fundraisers/",
-            "/settings",
-            "/lite/"
-        ],
-        "failedAnalysedPages": [],
-        "totalNumberOfPages": 29
-    }
+    "analysedWebsites": [
+        {
+            "domain": "https://youtu.be",
+            "toBeAnalysed": [
+                "https://youtu.be"
+            ],
+            "analysedPages": [],
+            "failedAnalysedPages": [],
+            "totalNumberOfPages": 0
+        },
+        {},
+        {
+            "domain": "https://docs.google.com",
+            "toBeAnalysed": [],
+            "analysedPages": [],
+            "failedAnalysedPages": [],
+            "totalNumberOfPages": 0
+        },
+        {}
+    ]
 }

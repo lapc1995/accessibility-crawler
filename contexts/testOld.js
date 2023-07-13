@@ -3,7 +3,7 @@ import { JsonDB, Config } from 'node-json-db';
 import seedrandom from 'seedrandom';
 import puppeteer from 'puppeteer';
 
-import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, readWebsiteCSV, forbiddenFilenameCharacters} from './../utils.js';
+import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, readWebsiteCSV, forbiddenFilenameCharacters} from '../utils.js';
 import { analysePrimarySite, analyseSecondarySite } from '../analyser.js'
 
 export const run = async() => {
