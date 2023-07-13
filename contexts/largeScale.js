@@ -133,7 +133,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
 
     //analyse 20% of links
     let requiredNumberOfLinks = Math.round(filtredLinks.length * 0.20);
-    const retryAmount = Math.round(filtredLinks.length * 0.23);
+    let retryAmount = Math.round(filtredLinks.length * 0.23);
     let retryCounter = 0;
     let successfullLinksCounter = 0;
 
