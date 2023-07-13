@@ -140,6 +140,32 @@ export const reduceFilenameSize = (filename) => {
     return filename;
 }
 
+
+export const zipDomainAndDatabases = async(name) => {
+    const archive = archiver('zip', { zlib: { level: 9 }});
+    const stream = fs.createWriteStream(`./${name}.zip`);
+
+    const dataPath = './data';
+    const errorPath = './error';
+
+    const dbPath = './largeScaleDB.json';
+    const dbLargeWebsitePath = './largeWebsitesDB.json';
+
+    return new Promise((resolve, reject) => {
+        archive
+          .directory(dataPath, dataPath.split('/').pop())
+          .directory(errorPath, errorPath.split('/').pop())
+          .file(dbPath, { name: dbPath.split('/').pop() })
+          .file(dbLargeWebsitePath, { name: dbLargeWebsitePath.split('/').pop() })
+          .on('error', err => reject(err))
+          .pipe(stream)
+        ;
+    
+        stream.on('close', () => resolve());
+        archive.finalize();
+      });
+}
+
 export const zipDataAndErrorFolder = async(name) => {
     const archive = archiver('zip', { zlib: { level: 9 }});
     const stream = fs.createWriteStream(`./${name}.zip`);
@@ -325,7 +351,7 @@ export const isSameDomain = (url, domain) => {
         console.log("Error parsing URL or domain", parsedUrl, parsedDomain);
         return false;
     }
-    
+
     return parsedUrl.domain == parsedDomain.domain;
 }
 

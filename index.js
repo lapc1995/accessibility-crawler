@@ -45,7 +45,7 @@ import * as utils from './utils.js';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-utils.eraseFoldersAndDatabase();
+//utils.eraseFoldersAndDatabase();
 
 (async () => {
 
