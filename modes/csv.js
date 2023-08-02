@@ -43,10 +43,11 @@ export const run = async (contextFunction) => {
     for(let website of websites) {
 
         try {
-            waitForBrowser();
+            await waitForBrowser();
             await withTimeoutAndParameters(analyseDomain, {website, contextFunction}, 1000 * 60 * 5);
 
         } catch(e) {
+            await waitForBrowser();
             const pages = await browser.pages();
             // Loop through each page and close it
             for (let i = 0; i < pages.length; i++) {
