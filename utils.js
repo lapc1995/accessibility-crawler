@@ -337,10 +337,8 @@ export const removeDoubleSlashAtStart = (url) => {
 export const isSameDomain = (url, domain) => {
 
     try {
-    console.log(url);
     url = new URL(url);
     } catch (error) {
-        console.log(error)
         return false
     }
 

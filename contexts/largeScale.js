@@ -95,7 +95,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     await testHomePage.close();
     homeURL = new URL(homeURL);
 
-    console.log(url,homeURL.host)
+    //console.log(url,homeURL.host)
    
     const primarySite = await analysePrimarySite(homeURL.host, browserFromHandler, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
@@ -268,7 +268,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         try {
             const resultSecondarySite = await getReportForURLParallel(fixedLink, browserFromHandler, {technologyReport: false, dontClosePage: false, analysedUrls: analysedUrls, homepageLink: parsedUrl});
             if(resultSecondarySite.error) {
-                if(resultSecondarySite.error == "Protocol error (Target.createTarget): Target closed.") {
+                if(resultSecondarySite.error == "Protocol error (Target.createTarget): Target closed." ||
+                   resultSecondarySite.error == "Navigation failed because browser has disconnected!") {
                     await waitForBrowser(browserFromHandler);
                 } 
 
