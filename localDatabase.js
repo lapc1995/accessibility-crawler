@@ -76,6 +76,9 @@ export const setPageToAnalysed = async (page) => {
         return;
     }
     const pageIndex = await db.getIndex("/currentWebsite/toBeAnalysed", page);
+    if(pageIndex == -1) {
+        return;
+    }
     await db.delete(`/currentWebsite/toBeAnalysed[${pageIndex}]`);
     await db.push("/currentWebsite/analysedPages[]", page);
 }
@@ -128,7 +131,7 @@ export const addPageToBeAnalysed = async (page) => {
     if(getCurrentWebsite() == null) {
         return;
     }
-    await db.push("/currentWebsite/toBeAnalysed[]", page);
+    await db.push("/currentWebsite/toBeAnalysed[]", {'id': page});
 }
 
 export const setPagetoFailedAnalysedPage = async (page, error) => {
@@ -137,6 +140,10 @@ export const setPagetoFailedAnalysedPage = async (page, error) => {
     }
 
     const pageIndex = await db.getIndex("/currentWebsite/toBeAnalysed", page);
+    if(pageIndex == -1) {
+        return;
+    }
+
     await db.delete(`/currentWebsite/toBeAnalysed[${pageIndex}]`);
     await db.push("/currentWebsite/failedAnalysedPages[]", {url: page, error: error});
 }

@@ -33,7 +33,7 @@ export const run = async (contextFunction) => {
         let domain = currentWebsite.domain.replaceAll("https://", "");
         domain = domain.replaceAll("http://", "");
         const index = websites.findIndex((website) => website.Domain == domain);
-        if(index != -1) {
+        if(index != -1 && index != 0) {
             let websiteElement = websites[index];
             websites.splice(index, 1);
             websites = [websiteElement, ...websites];

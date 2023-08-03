@@ -153,8 +153,30 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         retryCounter = currentWebsite.failedAnalysedPages.length;
         successfullLinksCounter = currentWebsite.analysedPages.length;
         analysedUrls.push(...currentWebsite.analysedPages);
+
+        let failedPages = currentWebsite.failedAnalysedPages.map((page) => page.url);
+        analysedUrls.push(...failedPages);
+
+        filtredLinks.forEach(element => {
+            element.href =  fixLink(element.href, primarySite.url);
+        });
+
         filtredLinks = filtredLinks.filter((link) => !analysedUrls.includes(link.href));
 
+        let toBeAnalysedTemp =  [...currentWebsite.toBeAnalysed];
+
+        //if website on toBeAnalysed, just clean it from list and assume that it was a error
+        for(let link of toBeAnalysedTemp) {
+            let error = {};
+            error.error = "Restart happened while analysing";
+            error.link = link.id
+            error.filename = generateFilename(link.id);
+            await db.setPagetoFailedAnalysedPage(link.id, error.error);
+            saveReportToJSONFile(error, errorFolder);
+        }
+
+        filtredLinks = filtredLinks.filter((link) => !toBeAnalysedTemp.includes(link));
+        /*
         const toBeAnalysedElements = [];
         for(let link of currentWebsite.toBeAnalysed) {
             const index = filtredLinks.findIndex((page) => page.href == link);
@@ -165,6 +187,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             }
         }
         filtredLinks = [...toBeAnalysedElements, ...filtredLinks];
+        */
     }
 
 
@@ -220,10 +243,10 @@ export const analyseLargeScaleDomain = async (url, browser) => {
 
         const link = filtredLinks[i];
 
-        await db.addPageToBeAnalysed(link.href);
-        
         const fixedLink = fixLink(link.href, primarySite.url);
-  
+
+        await db.addPageToBeAnalysed(fixedLink);
+
         let filename = dataFolder + "/" + generateFilename(fixedLink) + ".jsonld";
         if(fs.existsSync(filename)) {
             continue;
@@ -272,9 +295,13 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             const delayTime = Math.floor(Math.random() * (3000 - 1000 + 1) + 1000);
             await delay(delayTime);
         } catch (error) {
+            retryCounter++;
             console.log(error);
+            error.error = error.message;
             error.link = fixedLink;
-            saveReportToJSONFile(error, "./error");
+            error.filename = generateFilename(fixedLink);
+            await db.setPagetoFailedAnalysedPage(fixedLink, error.message);
+            saveReportToJSONFile(error, errorFolder);   
         }
         //await resultSecondarySite.page.close();
     }
