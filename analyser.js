@@ -258,7 +258,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         }
   
         if(options.phone) {
-            data.filename += "phone";
+            data.filename += "(phone)";
         }
   
         if(!options.dontClosePage) {

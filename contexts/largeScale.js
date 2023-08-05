@@ -3,7 +3,7 @@ import robotsParser from 'robots-txt-parser';
 import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters, hasInvalidExtension, removeHashFromUrl, delay, removeNonHTTPSLinks, shuffleArray, cleanLinkList, isSameDomain, saveMhtmlToFile} from './../utils.js';
 import { analysePrimarySite, analyseSecondarySite, getReportForURLParallel } from '../analyser.js';
 import { waitForBrowser, browser as browserFromHandler } from '../browserHandler.js';
-import * as db from '../localDatabase.js';
+import * as db from '../lowdbDatabase.js'//'../localDatabase.js';
 import * as largeWebsitesDB from '../largeWebsitesDatabase.js';
 
 const robots = robotsParser(
@@ -88,7 +88,14 @@ export const analyseLargeScaleDomain = async (url, browser) => {
 
     if(testHomePageStatus != null && (testHomePageStatus.charAt(0) == "4" || testHomePageStatus.charAt(0) == "5")) {
         await testHomePage.close();
-        return {url, error: testHomePageStatus, filename: generateFilename(url, Date.now()) };
+        saveReportToJSONFile({url, error: testHomePageStatus, filename: generateFilename(url, Date.now()) }, errorFolder);
+   
+        await db.setCurrentWebsite(url, [], 0);
+        await db.addPageToBeAnalysed(testHomePageResult.url());
+        await db.setPagetoFailedAnalysedPage(testHomePageResult.url(), testHomePageStatus);
+        await db.setCurrentWebsiteToAnalysed();
+
+        return;
     }
 
     let homeURL = testHomePageResult.url();
@@ -169,9 +176,9 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         for(let link of toBeAnalysedTemp) {
             let error = {};
             error.error = "Restart happened while analysing";
-            error.link = link.id
-            error.filename = generateFilename(link.id);
-            await db.setPagetoFailedAnalysedPage(link.id, error.error);
+            error.link = link
+            error.filename = generateFilename(link);
+            await db.setPagetoFailedAnalysedPage(link, error.error);
             saveReportToJSONFile(error, errorFolder);
         }
 
@@ -241,6 +248,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
 
     for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i++) {
 
+        await waitForBrowser(browserFromHandler);
+
         const link = filtredLinks[i];
 
         const fixedLink = fixLink(link.href, primarySite.url);
@@ -249,6 +258,9 @@ export const analyseLargeScaleDomain = async (url, browser) => {
 
         let filename = dataFolder + "/" + generateFilename(fixedLink) + ".jsonld";
         if(fs.existsSync(filename)) {
+            await db.setPageToAnalysed(fixedLink);
+            successfullLinksCounter++;
+            analysedUrls.push(fixedLink);
             continue;
         }
   
@@ -274,9 +286,10 @@ export const analyseLargeScaleDomain = async (url, browser) => {
                 } 
 
                 saveReportToJSONFile(resultSecondarySite, errorFolder);
-                db.setPagetoFailedAnalysedPage(link.href, resultSecondarySite.error);
+                await db.setPagetoFailedAnalysedPage(fixedLink, resultSecondarySite.error);
                    
-                if(resultSecondarySite.error != "Already analysed") {
+                if(resultSecondarySite.error != "Already analysed" &&
+                   resultSecondarySite.error != "Not the same domain") {
                     retryCounter++;
                 }
 
@@ -284,12 +297,14 @@ export const analyseLargeScaleDomain = async (url, browser) => {
                 analysedUrls.push(resultSecondarySite.url);
                 if(isSameDomain(resultSecondarySite.url, parsedUrl)) {
                     successfullLinksCounter++;
-                    await db.setPageToAnalysed(link.href);
+                    await db.setPageToAnalysed(fixedLink);
                     //saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
                     saveMhtmlToFile(dataFolder, resultSecondarySite.filename, resultSecondarySite.mhtml);
                     delete resultSecondarySite.html;
                     delete resultSecondarySite.mhtml;
                     saveReportToJSONFile(resultSecondarySite, dataFolder);
+                } else {
+                    console.log("Not the same domain", resultSecondarySite.url);
                 }
             }
 

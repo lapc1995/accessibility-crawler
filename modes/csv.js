@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import { readWebsiteCSV, saveReportToJSONFile, withTimeoutAndParameters, forbiddenFilenameCharacters } from './../utils.js';
 import {browser, initBrowser, waitForBrowser} from '../browserHandler.js'
-import * as db from '../localDatabase.js';
+import * as db from '../lowdbDatabase.js';//'../localDatabase.js';
 
 export const run = async (contextFunction) => {
     await initBrowser();
@@ -44,7 +44,15 @@ export const run = async (contextFunction) => {
 
         try {
             await waitForBrowser();
-            await withTimeoutAndParameters(analyseDomain, {website, contextFunction}, 1000 * 60 * 5);
+
+            /*
+            const pages = await browser.pages();
+            for (let i = 0; i < pages.length; i++) {
+              const currentPage = pages[i];
+              await currentPage.close();
+            }*/
+
+            await withTimeoutAndParameters(analyseDomain, {website, contextFunction}, 1000 * 60 * 15);
 
         } catch(e) {
             await waitForBrowser();

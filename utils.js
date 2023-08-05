@@ -231,7 +231,9 @@ export const withTimeoutAndParameters = async (promise, parameters, millis) => {
     let timer = null;
 
     const timeoutPromise = new Promise((resolve, reject) => {
-      timer = setTimeout(() => reject('Timeout after ' + millis + 'ms'), millis);
+      timer = setTimeout(() => {
+        reject('Timeout after ' + millis + 'ms')}
+        , millis);
     });
 
     const runningPromise = new Promise((resolve, reject) => {

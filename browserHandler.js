@@ -21,6 +21,7 @@ export const initBrowser = async() => {
             '--ignore-certificate-errors',
             '--allow-running-insecure-content',
             '--disable-web-security',
+            '--mute-audio',
         ]
     });
     browser.on('disconnected', async() => {
