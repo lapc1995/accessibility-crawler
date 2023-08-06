@@ -100,6 +100,7 @@ export const run = async (contextFunction) => {
             }
             saveReportToJSONFile(error, errorFolder);
       
+            throw e;
         }
     }
     browser.close();
