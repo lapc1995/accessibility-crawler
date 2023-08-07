@@ -7,7 +7,7 @@ import psl from 'psl';
 
 export const forbiddenFilenameCharacters = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
-export const extensionsToIgnore = [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip", ".rar", ".tar.gz"];
+export const extensionsToIgnore = [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip", ".rar", ".tar.gz",".xml",".json"];
 
 export const removeNonHTTPSLinks = (links) => {
     return links.filter(link => {
