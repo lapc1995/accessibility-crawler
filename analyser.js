@@ -24,6 +24,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
     try {
 
         await waitForBrowser();
+        await waitForBrowser();
 
         await delay(1000);
         console.log(browser);
