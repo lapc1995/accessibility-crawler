@@ -125,8 +125,10 @@ export const run = async (contextFunction) => {
             }
             saveReportToJSONFile(error, errorFolder);
       
-            await browser.close();
-
+            if(browser) {
+                await browser.close();
+            }
+            
             process.exit(1)
         }
     }
