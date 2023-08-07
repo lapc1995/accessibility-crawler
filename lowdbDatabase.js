@@ -69,12 +69,13 @@ export const setPageToAnalysed = async (page) => {
 export const setCurrentWebsiteToAnalysed = async () => {
     let currentWebsite = await getCurrentWebsite();
     if(currentWebsite == null) {
-        return;
+        return false;
     }
 
     db.data.analysedWebsites.push(currentWebsite);
     db.data.currentWebsite = null;
     await db.write();
+    return true;
 }
 
 export const isWebsiteAnalysed = async (domain) => {

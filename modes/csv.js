@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { readWebsiteCSV, saveReportToJSONFile, withTimeoutAndParameters, forbiddenFilenameCharacters } from './../utils.js';
+import { readWebsiteCSV, saveReportToJSONFile, withTimeoutAndParameters, forbiddenFilenameCharacters, generateFilename } from './../utils.js';
 import {browser, initBrowser, waitForBrowser} from '../browserHandler.js'
 import * as db from '../lowdbDatabase.js';//'../localDatabase.js';
 import { throws } from 'assert';
@@ -64,8 +64,6 @@ export const run = async (contextFunction) => {
               await currentPage.close();
             }
 
-            await db.setCurrentWebsiteToAnalysed();
-
             website = website.Domain;
 
             let dirname = website.replaceAll('https://','');
@@ -94,10 +92,36 @@ export const run = async (contextFunction) => {
             if(!fs.existsSync(errorFolder)) {
                 fs.mkdirSync(errorFolder);
             }
+
+
+            let currentWebsite = await db.getCurrentWebsite();
+            if(currentWebsite != null) {
+                let toBeAnalysedTemp =  [...currentWebsite.toBeAnalysed];
+                for(let link of toBeAnalysedTemp) {
+                    let error = {};
+                    error.error = e.message;
+                    error.link = link
+                    error.filename = generateFilename(link);
+                    await db.setPagetoFailedAnalysedPage(link, error.error);
+                    saveReportToJSONFile(error, errorFolder);
+                }
+                await db.setCurrentWebsiteToAnalysed();
+            } else {
+                await db.setCurrentWebsite(website, [], 0);
+                await db.addPageToBeAnalysed(website);
+                let error = {};
+                error.error = e.message;
+                error.link = website
+                error.filename = generateFilename(website);
+                await db.setPagetoFailedAnalysedPage(website, error.error);    
+            }
+
+
+
             
             let error = {
                 filename: website,
-                error: e
+                error: e.message
             }
             saveReportToJSONFile(error, errorFolder);
       
