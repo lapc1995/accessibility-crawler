@@ -26,8 +26,6 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         await waitForBrowser();
         await waitForBrowser();
 
-        await delay(1000);
-        console.log(browser);
         let userAgent = await browser.userAgent();
         userAgent += " crawled for https://luiscarvalho.dev/accessibilityStudy/";
 

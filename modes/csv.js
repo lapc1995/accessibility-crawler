@@ -116,9 +116,6 @@ export const run = async (contextFunction) => {
                 await db.setPagetoFailedAnalysedPage(website, error.error);    
             }
 
-
-
-            
             let error = {
                 filename: website,
                 error: e.message
