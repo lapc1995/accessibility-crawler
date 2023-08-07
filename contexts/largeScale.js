@@ -83,9 +83,9 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     try {
         testHomePageResult = await testHomePage.goto(url, {waitUntil: 'networkidle2', timeout: 30000});
     } catch(e) {
+        await delay(2000);
         await testHomePage.close();
         saveReportToJSONFile({url, error: e.message, filename: generateFilename(url, Date.now()) }, errorFolder);
-   
         await db.setCurrentWebsite(url, [], 0);
         await db.addPageToBeAnalysed(url);
         await db.setPagetoFailedAnalysedPage(url, e.message);
