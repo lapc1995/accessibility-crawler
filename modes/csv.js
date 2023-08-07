@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { readWebsiteCSV, saveReportToJSONFile, withTimeoutAndParameters, forbiddenFilenameCharacters } from './../utils.js';
 import {browser, initBrowser, waitForBrowser} from '../browserHandler.js'
 import * as db from '../lowdbDatabase.js';//'../localDatabase.js';
+import { throws } from 'assert';
 
 export const run = async (contextFunction) => {
     await initBrowser();
@@ -100,7 +101,9 @@ export const run = async (contextFunction) => {
             }
             saveReportToJSONFile(error, errorFolder);
       
-            throw e;
+            await browser.close();
+
+            process.exit(1)
         }
     }
     browser.close();

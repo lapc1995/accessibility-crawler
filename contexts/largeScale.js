@@ -78,7 +78,21 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     await waitForBrowser();
 
     let testHomePage = await browserFromHandler.newPage();
-    let testHomePageResult = await testHomePage.goto(url, {waitUntil: 'networkidle2', timeout: 30000});
+    let testHomePageResult = null;
+
+    try {
+        testHomePageResult = await testHomePage.goto(url, {waitUntil: 'networkidle2', timeout: 30000});
+    } catch(e) {
+        await testHomePage.close();
+        saveReportToJSONFile({url, error: e.message, filename: generateFilename(url, Date.now()) }, errorFolder);
+   
+        await db.setCurrentWebsite(url, [], 0);
+        await db.addPageToBeAnalysed(url);
+        await db.setPagetoFailedAnalysedPage(url, e.message);
+        await db.setCurrentWebsiteToAnalysed();
+        return;
+    }
+    
     if(testHomePageResult == null) {
         console.log("Got null, trying wait.");
         testHomePageResult = await testHomePage.waitForResponse(() => true);
