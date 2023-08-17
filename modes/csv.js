@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { readWebsiteCSV, saveReportToJSONFile, withTimeoutAndParameters, forbiddenFilenameCharacters, generateFilename } from './../utils.js';
-import {browser, initBrowser, waitForBrowser} from '../browserHandler.js'
+import {browser, initBrowser, waitForBrowser, setBrowserAutoRestart} from '../browserHandler.js'
 import * as db from '../lowdbDatabase.js';//'../localDatabase.js';
 import { throws } from 'assert';
 
@@ -129,7 +129,11 @@ export const run = async (contextFunction) => {
             process.exit(1)
         }
     }
-    browser.close();
+
+    setBrowserAutoRestart(true);
+    if(browser) {
+        await browser.close();
+    }
 }
 
 const analyseDomain = async (parameters) => {

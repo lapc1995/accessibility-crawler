@@ -7,9 +7,16 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch Index.js",
             "skipFiles": ["<node_internals>/**"],
             "program": "${workspaceFolder}/index.js"
-        }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch CSV Repeater",
+            "skipFiles": ["<node_internals>/**"],
+            "program": "${workspaceFolder}/csvRepeater.js"
+        },
     ]
 }

@@ -4,6 +4,12 @@ import puppeteer from 'puppeteer';
 export let browser;
 export let waitingForBrowser = false;
 
+let disableBrowserAutoRestart = false;
+
+export const setBrowserAutoRestart = (state) => {
+    disableBrowserAutoRestart = state;
+}
+
 export const initBrowser = async() => {
     if(browser !== false) {
         await closeBrowser();
@@ -24,9 +30,17 @@ export const initBrowser = async() => {
             '--mute-audio',
         ]
     });
+
+    disableBrowserAutoRestart = false;
+
     browser.on('disconnected', async() => {
         console.log("Browser disconnected");
         browser = false;
+
+        if(disableBrowserAutoRestart) {
+            return;
+        }
+
         await initBrowser();
     });
     return browser;

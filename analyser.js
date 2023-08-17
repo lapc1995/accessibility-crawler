@@ -93,6 +93,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         }
   
         let site = null;
+        let pageHeaderContentTypes = [];
         page.setRequestInterception(true);
 
         page.on('request', async (request) => {
@@ -113,6 +114,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         
         page.on('response', async (response) => {
             const headers = response.headers();
+            pageHeaderContentTypes.push(headers['content-type']);
             if(headers['content-type'] == "application/pdf") {
                 return;
             }
@@ -128,7 +130,8 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
   
         let gotoResponse = null;
         try {
-            gotoResponse = await page.goto(url, { waitUntil: ['networkidle0']});
+
+            gotoResponse = await page.goto(url, { waitUntil: ['networkidle2']});
 
             if(gotoResponse == null) {
                 console.log("Got null, trying wait.");
@@ -149,7 +152,23 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
                     return {url, error: "Not the same domain", filename: generateFilename(url, Date.now()) };
                 }
             }
-            
+
+            const hasXml = pageHeaderContentTypes.find((contentType) => {
+                if(contentType) {
+                    return contentType.includes('text/xml')
+                }
+            });
+            const hasHtml = pageHeaderContentTypes.find((contentType) => {
+                if(contentType) {
+                    return contentType.includes('text/html')
+                }
+            });
+
+            if(hasXml && !hasHtml) {
+                await page.close();
+                return {url, error: "XML page", filename: generateFilename(url, Date.now()) };
+            }
+
         } catch(e) {
             console.log(e)
             if(e.name == "TimeoutError") {
@@ -230,7 +249,6 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
         } catch(e) {
             console.log(e);
         }
-   
 
         data["@context"] = "http://luiscarvalho.dev/contexts/",
         data["@type"] = "pageReport"

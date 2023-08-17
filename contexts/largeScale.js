@@ -224,21 +224,23 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     //phone page
     const phoneHomePage = await getReportForURLParallel(url, browserFromHandler, {technologyReport: false, dontClosePage: false, phone: true});
     if(phoneHomePage.error) {
-        await db.addPageToBeAnalysed(phoneHomePage.url + "phone");
-        await db.setPagetoFailedAnalysedPage(phoneHomePage.url + "phone", phoneHomePage.error);
+        await db.addPageToBeAnalysed(phoneHomePage.url + "(phone)");
+        await db.setPagetoFailedAnalysedPage(phoneHomePage.url + "(phone)", phoneHomePage.error);
         if(primarySite.error == "Protocol error (Target.createTarget): Target closed." ||
            primarySite.error == "Navigation failed because browser has disconnected!") {
             await waitForBrowser(browserFromHandler);
         }
+        phoneHomePage.filename += "(phone)";
         saveReportToJSONFile(phoneHomePage, errorFolder);
-        return;
+    } else {
+        saveMhtmlToFile(dataFolder, phoneHomePage.filename, phoneHomePage.mhtml);
+        delete phoneHomePage.html;
+        delete phoneHomePage.mhtml;
+        saveReportToJSONFile(phoneHomePage, dataFolder);
+        await db.addPageToBeAnalysed(phoneHomePage.url + "(phone)");
+        await db.setPageToAnalysed(phoneHomePage.url + "(phone)");
     }
-    saveMhtmlToFile(dataFolder, phoneHomePage.filename, phoneHomePage.mhtml);
-    delete phoneHomePage.html;
-    delete phoneHomePage.mhtml;
-    saveReportToJSONFile(phoneHomePage, dataFolder);
-    await db.addPageToBeAnalysed(phoneHomePage.url + "(phone)");
-    await db.setPageToAnalysed(phoneHomePage.url + "(phone)");
+
 
     //check if contact page exists
     try {
@@ -246,13 +248,14 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         let contactPage = await browserFromHandler.newPage();
         let contactReponse = await contactPage.goto(contactUrl.href, {waitUntil: 'networkidle2', timeout: 30000});
         let contactStatus = `${contactReponse.status()}`;
-        if(contactStatus.charAt(0) == "4" || contactStatus.charAt(0) == "5") {
+        if(contactStatus.charAt(0) == "4" || contactStatus.charAt(0) == "5" || !isSameDomain(contactPage.url(), parsedUrl)) {
             await contactPage.close();
-        } else {
+        }  else {
             filtredLinks = [contactUrl, ...filtredLinks];
             requiredNumberOfLinks++;
             await contactPage.close();
         }
+
     } catch(e) {
         if(e.message == "Protocol error (Target.createTarget): Target closed." ||
             e.message == "Navigation failed because browser has disconnected!") {
@@ -303,7 +306,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
                 await db.setPagetoFailedAnalysedPage(fixedLink, resultSecondarySite.error);
                    
                 if(resultSecondarySite.error != "Already analysed" &&
-                   resultSecondarySite.error != "Not the same domain") {
+                   resultSecondarySite.error != "Not the same domain" &&
+                   resultSecondarySite.error != "XML Page") {
                     retryCounter++;
                 }
 

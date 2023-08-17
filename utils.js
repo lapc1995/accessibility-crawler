@@ -405,4 +405,11 @@ export const eraseFoldersAndDatabase = () => {
     fs.unlinkSync('largeScaleDB.json');
 }
 
+export const renameFolder = (oldFolderName, newFolderName) => {
+    try {
+        fs.renameSync(oldFolderName, newFolderName);
+    } catch(error) {
+        console.log(error);
+    }
+}
   

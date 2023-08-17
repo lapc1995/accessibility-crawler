@@ -32,28 +32,26 @@ async function restartCrawler() {
 
 const timeout = 1000 * 60 * 30;
 
-
 const watcher = chokidar.watch('./largeScaleDB.json', {
     persistent: true
   });
 
 const log = console.log.bind(console);
 
-const OnFileChange = () => {
-    console.log("File changed");
+const onFileChange = () => {
     resetTimer();
 }
 
 watcher
-.on('add', path => log(`File ${path} has been added`))
-.on('change', path => log(`File ${path} has been changed`))
-
+//.on('add', path => log(`File ${path} has been added`))
+.on('change', path => {
+    onFileChange();
+})
 
 timeoutId = setTimeout(restartCrawler, timeout);
 
 function resetTimer() {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(restartCrawler, timeout);
-    console.log("Timer reset");
 }
 
