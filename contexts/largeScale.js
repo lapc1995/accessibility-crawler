@@ -1,10 +1,12 @@
 import * as fs from 'fs';
 import robotsParser from 'robots-txt-parser';
-import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters, hasInvalidExtension, removeHashFromUrl, delay, removeNonHTTPSLinks, shuffleArray, cleanLinkList, isSameDomain, saveMhtmlToFile} from './../utils.js';
+import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters, hasInvalidExtension, removeHashFromUrl, delay, removeNonHTTPSLinks, shuffleArray, cleanLinkList, isSameDomain, saveMhtmlToFile, withTimeout} from './../utils.js';
 import { analysePrimarySite, analyseSecondarySite, getReportForURLParallel } from '../analyser.js';
 import { waitForBrowser, browser as browserFromHandler } from '../browserHandler.js';
 import * as db from '../lowdbDatabase.js'//'../localDatabase.js';
 import * as largeWebsitesDB from '../largeWebsitesDatabase.js';
+
+import * as vm from 'vm';
 
 const robots = robotsParser(
 {
@@ -61,7 +63,27 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         await robots.useRobotsFor(url);
         await robots.useRobotsFor(url);
 
-        const canCrawlMain = await robots.canCrawl(url)
+        
+        let canCrawlMain = false;
+        
+        try {
+
+            let sandbox = {
+                robots: robots,
+                url: url,
+            }
+
+            const vmContext = new vm.createContext(sandbox);
+            const scriptCode = `
+            (async () => {
+                return await robots.canCrawl(url);
+            })();`;
+            canCrawlMain = await vm.runInContext(scriptCode, vmContext, {timeout: 2000});
+        } catch(e) {
+            canCrawlMain = true;
+            console.log(e);
+        }
+    
         if(!canCrawlMain) {
             console.log("Can't crawl main page");
             await db.setCurrentWebsite(url, [], 0);
