@@ -19,6 +19,18 @@ export const analyseLargeScaleDomain = async (url, browser) => {
 
     await waitForBrowser();
 
+    let tempWebsite = await db.getTempCurrentWebsite();
+    if(tempWebsite != null) {
+        await db.setCurrentWebsite(url, [], 0);
+        await db.addPageToBeAnalysed(url);
+        await db.setPagetoFailedAnalysedPage(url, "Page caused restart");
+        await db.setCurrentWebsiteToAnalysed();
+        await db.setTempCurrentWebsite(null);
+        return;
+    }
+
+    await db.setTempCurrentWebsite(url);
+
     if(!url.includes('http')) {
       url = `https://${url}`;
     }
@@ -90,6 +102,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             await db.addPageToBeAnalysed(url);
             await db.setPagetoFailedAnalysedPage(url, "Can't crawl main page");
             await db.setCurrentWebsiteToAnalysed();
+            await db.setTempCurrentWebsite(null);
             return;
         }
     } catch(e) {
@@ -112,6 +125,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         await db.addPageToBeAnalysed(url);
         await db.setPagetoFailedAnalysedPage(url, e.message);
         await db.setCurrentWebsiteToAnalysed();
+        await db.setTempCurrentWebsite(null);
         return;
     }
     
@@ -130,6 +144,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         await db.addPageToBeAnalysed(testHomePageResult.url());
         await db.setPagetoFailedAnalysedPage(testHomePageResult.url(), testHomePageStatus);
         await db.setCurrentWebsiteToAnalysed();
+        await db.setTempCurrentWebsite(null);
 
         return;
     }
@@ -147,6 +162,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         await db.addPageToBeAnalysed(primarySite.url);
         await db.setPagetoFailedAnalysedPage(primarySite.url, primarySite.error);
         await db.setCurrentWebsiteToAnalysed();
+        await db.setTempCurrentWebsite(null);
         
         if(primarySite.error == "Protocol error (Target.createTarget): Target closed." || 
             primarySite.error == "Navigation failed because browser has disconnected!") {
@@ -185,6 +201,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     
     //filtredLinks = filtredLinks.slice(0, requiredNumberOfLinks);
     //const justUrls = filtredLinks.map((link) => link.href);
+
+    await db.setTempCurrentWebsite(null);
 
     const isWebsiteCurrent = await db.isWebsiteCurrent(url);
     if(!isWebsiteCurrent) {

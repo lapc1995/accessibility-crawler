@@ -11,7 +11,8 @@ const file = join(__dirname, 'largeScaleDB.json')
 
 // Configure lowdb to write data to JSON file
 const adapter = new JSONFile(file)
-const defaultData = { 
+const defaultData = {
+    tempCurrentWebsite: null,
     currentWebsite: null,
     analysedWebsites: [],
 }
@@ -21,6 +22,15 @@ const db = new Low(adapter, defaultData)
 // If JSON file doesn't exist, defaultData is used instead
 await db.read()
 
+export const getTempCurrentWebsite = async () => {
+    await db.read()
+    return db.data.tempCurrentWebsite;
+}
+
+export const setTempCurrentWebsite = async (url) => {
+    db.data.tempCurrentWebsite = url;
+    await db.write()
+}
 
 export const getAnalysedWebsites = async () => {
     await db.read()
