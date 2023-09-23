@@ -1,6 +1,8 @@
 import { JWT } from 'google-auth-library';
 import fs from 'fs/promises';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
+import * as dotenv from 'dotenv'
+dotenv.config()
 
 const data = await fs.readFile(`./keys/${process.env.SHEET_AUTH_FILE}`, 'utf8');
 const creds = JSON.parse(data);
