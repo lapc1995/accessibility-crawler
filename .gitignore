@@ -16,3 +16,7 @@ top10milliondomains.csv
 *.zip
 *.csv
 ecommercecsvs
+
+keys
+
+.env
