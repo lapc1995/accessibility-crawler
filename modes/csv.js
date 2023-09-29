@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import { readWebsiteCSV, saveReportToJSONFile, withTimeoutAndParameters, forbiddenFilenameCharacters, generateFilename } from './../utils.js';
 import {browser, initBrowser, waitForBrowser, setBrowserAutoRestart} from '../browserHandler.js'
 import * as db from '../lowdbDatabase.js';//'../localDatabase.js';
-import { throws } from 'assert';
+
+import * as websitesCache from '../websitesCache.js';
 
 export const run = async (contextFunction) => {
     await initBrowser();
@@ -27,6 +28,7 @@ export const run = async (contextFunction) => {
         if(index != -1) {
             websites.splice(index, 1);
         }
+        websitesCache.addVisitedWebsite(domain);
     }
 
     let currentWebsite = await db.getCurrentWebsite();
@@ -40,6 +42,8 @@ export const run = async (contextFunction) => {
             websites = [websiteElement, ...websites];
         }
     }
+
+    
 
     for(let website of websites) {
 

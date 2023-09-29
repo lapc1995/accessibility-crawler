@@ -8,6 +8,8 @@ import * as largeWebsitesDB from '../largeWebsitesDatabase.js';
 
 import * as vm from 'vm';
 
+import * as websitesCache from '../websitesCache.js';
+
 const robots = robotsParser(
 {
     userAgent: 'Googlebot', // The default user agent to use when looking for allow/disallow rules, if this agent isn't listed in the active robots.txt, we use *.
@@ -154,6 +156,16 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     homeURL = new URL(homeURL);
 
     //console.log(url,homeURL.host)
+
+    if(websitesCache.hasWebsiteBeenVisited(homeURL.host)) {
+        console.log("Website already visited");
+        await db.setCurrentWebsite(url, [], 0);
+        await db.addPageToBeAnalysed(homeURL.host);
+        await db.setPagetoFailedAnalysedPage(homeURL.host, "Website already visited");
+        await db.setCurrentWebsiteToAnalysed();
+        await db.setTempCurrentWebsite(null);
+        return;
+    }
    
     const primarySite = await analysePrimarySite(homeURL.host, browserFromHandler, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
@@ -380,7 +392,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         //await resultSecondarySite.page.close();
     }
     await db.setCurrentWebsiteToAnalysed();
-
+    websitesCache.addVisitedWebsite(homeURL.host)
 
     //await primarySite.page.close();
 }
