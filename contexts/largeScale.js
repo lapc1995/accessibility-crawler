@@ -164,9 +164,15 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         await db.setPagetoFailedAnalysedPage(homeURL.host, "Website already visited");
         await db.setCurrentWebsiteToAnalysed();
         await db.setTempCurrentWebsite(null);
+
+        let error = {};
+        error.error = "Website already visited";
+        error.link = homeURL.host
+        error.filename = generateFilename(homeURL.host);
+        saveReportToJSONFile(error, errorFolder);
         return;
     }
-   
+
     const primarySite = await analysePrimarySite(homeURL.host, browserFromHandler, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
 
@@ -366,6 +372,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             } else {
                 analysedUrls.push(resultSecondarySite.url);
                 if(isSameDomain(resultSecondarySite.url, parsedUrl)) {
+                    
                     successfullLinksCounter++;
                     await db.setPageToAnalysed(fixedLink);
                     //saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
