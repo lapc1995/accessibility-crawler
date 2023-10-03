@@ -61,6 +61,15 @@ export const setCurrentWebsite = async (domain, pages, totalNumberOfPages) => {
     await db.write()
 }
 
+export const setCurrentWebsiteTotalNumberOfPages = async (totalNumberOfPages) => {
+    const currentWebsite = await getCurrentWebsite();
+    if(currentWebsite == null) {
+        return;
+    }
+    db.data.currentWebsite.totalNumberOfPages = totalNumberOfPages;
+    await db.write();
+}
+
 export const setPageToAnalysed = async (page) => {
     const currentWebsite = await getCurrentWebsite();
     if(currentWebsite == null) {
@@ -157,4 +166,18 @@ export const isWebsiteCurrent = async (website) => {
         return false;
     }
     return currentWebsite.domain == website;
+}
+
+export const removePageToBeAnalysed = async (page) => {
+    const currentWebsite = await getCurrentWebsite();
+    if(currentWebsite == null) {
+        return;
+    }
+
+    const pageIndex = db.data.currentWebsite.toBeAnalysed.findIndex((element) => element == page);
+    if(pageIndex == -1) {
+        return;
+    }
+    db.data.currentWebsite.toBeAnalysed.splice(pageIndex, 1);
+    await db.write();
 }

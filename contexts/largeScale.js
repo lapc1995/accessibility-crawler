@@ -177,8 +177,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     if(primarySite.error) {
 
         await db.setCurrentWebsite(url, [], 0);
-        await db.addPageToBeAnalysed(primarySite.url);
-        await db.setPagetoFailedAnalysedPage(primarySite.url, primarySite.error);
+        await db.addPageToBeAnalysed(primarySite.url + "(homepage)");
+        await db.setPagetoFailedAnalysedPage(primarySite.url + "(homepage)", primarySite.error);
         await db.setCurrentWebsiteToAnalysed();
         await db.setTempCurrentWebsite(null);
         
@@ -186,10 +186,13 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             primarySite.error == "Navigation failed because browser has disconnected!") {
             await waitForBrowser(browserFromHandler);
         }
+
+        primarySite.filename += "(homepage)";
         saveReportToJSONFile(primarySite, errorFolder);
         return;
     }
 
+    primarySite.filename += "(homepage)";
     //saveHtmlToFile(dirname, primarySite.filename, primarySite.html);
     saveMhtmlToFile(dataFolder, primarySite.filename, primarySite.mhtml);
     delete primarySite.html;
@@ -225,8 +228,8 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     const isWebsiteCurrent = await db.isWebsiteCurrent(url);
     if(!isWebsiteCurrent) {
         await db.setCurrentWebsite(url, [], filtredLinks.length);
-        await db.addPageToBeAnalysed(primarySite.url);
-        await db.setPageToAnalysed(primarySite.url);
+        await db.addPageToBeAnalysed(primarySite.url + "(homepage)");
+        await db.setPageToAnalysed(primarySite.url + "(homepage)");
     } else {
         let currentWebsite = await db.getCurrentWebsite();
         retryCounter = currentWebsite.failedAnalysedPages.length;
@@ -333,9 +336,27 @@ export const analyseLargeScaleDomain = async (url, browser) => {
 
         let filename = dataFolder + "/" + generateFilename(fixedLink) + ".jsonld";
         if(fs.existsSync(filename)) {
+            
+            /*
             await db.setPageToAnalysed(fixedLink);
             successfullLinksCounter++;
             analysedUrls.push(fixedLink);
+            continue;
+            */
+
+            await db.removePageToBeAnalysed(fixedLink);
+            const newLinksLength = filtredLinks.length - 1;
+            await db.setCurrentWebsiteTotalNumberOfPages(newLinksLength);
+
+            if(filtredLinks.length < 11) {
+                requiredNumberOfLinks = newLinksLength;
+                retryAmount = newLinksLength;
+            } else {
+                requiredNumberOfLinks = Math.round(newLinksLength * 0.20);
+                retryAmount = Math.round(newLinksLength * 0.23);
+            }
+        
+            console.log('link already analysed', fixedLink);
             continue;
         }
   

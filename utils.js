@@ -24,10 +24,32 @@ export const hasInvalidExtension = (url) => {
 
 export const removeHashFromUrl = (url) => {
     const hashIndex = url.indexOf("#");
+    if (hashIndex == -1) {
+        return url;
+    }
+
+    const hashSplit = url.split('#');
+    if(hashSplit.length < 2) {
+        return url;
+    }
+
+    const slashSplit = hashSplit[1].split('/');
+    if(slashSplit.length == 1) {
+        return hashSplit[0];
+    } else if(slashSplit.length == 2) {
+        if(slashSplit[1] == '') {
+            return hashSplit[0]
+        } else {
+            return url;
+        }
+    } else {
+        return url;
+    }
+
+    /*
     if (hashIndex !== -1) {
       url = url.substring(0, hashIndex);
-    }
-    return url;
+    }*/
 }
 
 export const saveMhtmlToFile = (dir, filename, mhtmlContent) => {
@@ -300,6 +322,9 @@ export const cleanLinkList = (url, links) => {
     });
     filtredLinks = removeDuplicateLinks(filtredLinks);
     let parsedUrl = new URL(url);
+
+    filtredLinks = filtredLinks.filter((link) => link.href != './');
+    filtredLinks = filtredLinks.filter((link) => link.href != '/');
 
     /*
     parsedUrl.pathname = '/';
