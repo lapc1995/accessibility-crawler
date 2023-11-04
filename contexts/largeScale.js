@@ -13,11 +13,116 @@ import * as websitesCache from '../websitesCache.js';
 
 import { isMalicious } from '../maliciousDomainDetector.js';
 
+import pLimit from 'p-limit';
+
 const robots = robotsParser(
 {
     userAgent: 'Googlebot', // The default user agent to use when looking for allow/disallow rules, if this agent isn't listed in the active robots.txt, we use *.
     allowOnNeutral: false // The value to use when the robots.txt rule's for allow and disallow are balanced on whether a link can be crawled.
 });
+
+
+async function analyizePage(browser, domain, dataFolder, errorFolder, analysedUrls, parsedUrl, link) {
+    await waitForBrowser(browser);
+
+    const fixedLink = fixLink(link.href, domain);
+    await db.addPageToBeAnalysed(fixedLink);
+
+    let filename = dataFolder + "/" + generateFilename(fixedLink) + ".jsonld";
+    if(fs.existsSync(filename)) {
+
+        const newLinksLength = filtredLinks.length - 1;
+        await db.removePageToBeAnalysed(fixedLink);
+
+        await db.setCurrentWebsiteTotalNumberOfPages(newLinksLength);
+
+        /*
+        if(filtredLinks.length < 11) {
+            requiredNumberOfLinks = newLinksLength;
+            retryAmount = newLinksLength;
+        } else {
+            requiredNumberOfLinks = Math.round(newLinksLength * 0.20);
+            retryAmount = Math.round(newLinksLength * 0.23);
+        }
+    
+        console.log('link already analysed', fixedLink);
+        continue;
+        */
+        return 
+    }
+
+    console.log("Analysing " + fixedLink + " ...")
+
+    try {
+        const canCrawl = await robots.canCrawl(fixedLink)
+        if(!canCrawl) {
+            console.log("Can't crawl page", fixedLink);
+            await db.setPagetoFailedAnalysedPage(fixedLink, "Can't crawl page");
+            return;
+        }
+    } catch(e) {
+        console.log(e);
+    }
+
+
+    if(isMalicious(fixedLink)) {
+        console.log("Malicious Page");           
+        await db.setPagetoFailedAnalysedPage(fixedLink, "Malicious Page");
+        return;
+    }
+
+    try {
+        const resultSecondarySite = await getReportForURLParallel(fixedLink, browserFromHandler, {technologyReport: false, dontClosePage: false, analysedUrls: analysedUrls, homepageLink: parsedUrl});
+        if(resultSecondarySite.error) {
+            if(resultSecondarySite.error == "Protocol error (Target.createTarget): Target closed." ||
+               resultSecondarySite.error == "Navigation failed because browser has disconnected!") {
+                await waitForBrowser(browserFromHandler);
+            } 
+
+            saveReportToJSONFile(resultSecondarySite, errorFolder);
+            await db.setPagetoFailedAnalysedPage(fixedLink, resultSecondarySite.error);
+               
+            if(resultSecondarySite.error != "Already analysed" &&
+               resultSecondarySite.error != "Not the same domain" &&
+               resultSecondarySite.error != "XML Page") {
+                retryCounter++;
+            }
+
+        } else {
+
+            if(isMalicious(resultSecondarySite.url)) {
+                resultSecondarySite.error = "Malicious Page";
+                saveReportToJSONFile(resultSecondarySite, errorFolder);
+                await db.setPagetoFailedAnalysedPage(fixedLink, resultSecondarySite.error);
+                return ;
+            }
+
+            analysedUrls.push(resultSecondarySite.url);
+            if(isSameDomain(resultSecondarySite.url, parsedUrl)) {
+                
+                await db.setPageToAnalysed(fixedLink);
+                //saveHtmlToFile(dirname, resultSecondarySite.filename, resultSecondarySite.html);
+                saveMhtmlToFile(dataFolder, resultSecondarySite.filename, resultSecondarySite.mhtml);
+                delete resultSecondarySite.html;
+                delete resultSecondarySite.mhtml;
+                saveReportToJSONFile(resultSecondarySite, dataFolder);
+            } else {
+                console.log("Not the same domain", resultSecondarySite.url);
+            }
+        }
+
+        const delayTime = Math.floor(Math.random() * (3000 - 1000 + 1) + 1000);
+        await delay(delayTime);
+    } catch (error) {
+        //retryCounter++;
+        console.log(error);
+        error.error = error.message;
+        error.link = fixedLink;
+        error.filename = generateFilename(fixedLink);
+        await db.setPagetoFailedAnalysedPage(fixedLink, error.message);
+        saveReportToJSONFile(error, errorFolder);   
+    }
+}
 
 
 export const analyseLargeScaleDomain = async (url, browser) => {
@@ -369,6 +474,18 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         }
     }
 
+    const tasks = [];
+
+
+    const limit = pLimit(100);
+
+    for(let i = 0; i < requiredNumberOfLinks; i++) {
+        tasks.push(limit(async () => { await analyizePage(browserFromHandler, primarySite.url, dataFolder,  errorFolder, analysedUrls, parsedUrl, filtredLinks[i]); }));
+    }
+
+    const result = await Promise.all(tasks);
+    console.log(result);
+    /*
     for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i++) {
 
         await waitForBrowser(browserFromHandler);
@@ -382,13 +499,6 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         let filename = dataFolder + "/" + generateFilename(fixedLink) + ".jsonld";
         if(fs.existsSync(filename)) {
             
-            /*
-            await db.setPageToAnalysed(fixedLink);
-            successfullLinksCounter++;
-            analysedUrls.push(fixedLink);
-            continue;
-            */
-
             await db.removePageToBeAnalysed(fixedLink);
             const newLinksLength = filtredLinks.length - 1;
             await db.setCurrentWebsiteTotalNumberOfPages(newLinksLength);
@@ -479,6 +589,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         }
         //await resultSecondarySite.page.close();
     }
+    */
     await db.setCurrentWebsiteToAnalysed();
     websitesCache.addVisitedWebsite(homeURL.host)
 
