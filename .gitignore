@@ -15,6 +15,7 @@ top10milliondomains.csv
 
 *.zip
 *.csv
+!blackbook.csv
 ecommercecsvs
 
 keys

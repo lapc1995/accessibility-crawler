@@ -10,6 +10,9 @@ import * as vm from 'vm';
 
 import * as websitesCache from '../websitesCache.js';
 
+
+import { isMalicious } from '../maliciousDomainDetector.js';
+
 const robots = robotsParser(
 {
     userAgent: 'Googlebot', // The default user agent to use when looking for allow/disallow rules, if this agent isn't listed in the active robots.txt, we use *.
@@ -111,6 +114,20 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         console.log(e);
     }
 
+    //check if domain is malicious
+    if(isMalicious(url)) {
+        console.log("Malicious domain");
+        await db.setCurrentWebsite(url, [], 0);
+        await db.addPageToBeAnalysed(url);
+        await db.setPagetoFailedAnalysedPage(url, "Malicious domain");
+        await db.setCurrentWebsiteToAnalysed();
+        await db.setTempCurrentWebsite(null);
+        saveReportToJSONFile({url, error: "Malicious domain", filename: generateFilename(url, Date.now()) }, errorFolder);
+        return;
+    }
+
+
+
     //check that is home page
     await waitForBrowser();
 
@@ -173,6 +190,21 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         return;
     }
 
+    if(isMalicious(homeURL.host)) {
+        console.log("Malicious domain");
+        await db.setCurrentWebsite(url, [], 0);
+        await db.addPageToBeAnalysed(homeURL.host + "(homepage)");
+        await db.setPagetoFailedAnalysedPage(homeURL.host, "Malicious domain");
+        await db.setCurrentWebsiteToAnalysed();
+        await db.setTempCurrentWebsite(null);
+
+        tempFilename = generateFilename(url, Date.now());
+        tempFilename += "(homepage)";
+
+        saveReportToJSONFile({url: homeURL.host, error: "Malicious domain", filename: tempFilename }, errorFolder);
+        return;
+    }
+
     const primarySite = await analysePrimarySite(homeURL.host, browserFromHandler, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
 
@@ -187,6 +219,19 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             await waitForBrowser(browserFromHandler);
         }
 
+        primarySite.filename += "(homepage)";
+        saveReportToJSONFile(primarySite, errorFolder);
+        return;
+    }
+
+    if(isMalicious(primarySite.url)) { 
+    
+        await db.setCurrentWebsite(url, [], 0);
+        await db.addPageToBeAnalysed(primarySite.url + "(homepage)");
+        await db.setPagetoFailedAnalysedPage(primarySite.url + "(homepage)", "Malicious domain");
+        await db.setCurrentWebsiteToAnalysed();
+        await db.setTempCurrentWebsite(null);
+        
         primarySite.filename += "(homepage)";
         saveReportToJSONFile(primarySite, errorFolder);
         return;
@@ -373,6 +418,13 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             console.log(e);
         }
 
+
+        if(isMalicious(fixedLink)) {
+            console.log("Malicious Page");           
+            await db.setPagetoFailedAnalysedPage(fixedLink, "Malicious Page");
+            continue;
+        }
+
         try {
             const resultSecondarySite = await getReportForURLParallel(fixedLink, browserFromHandler, {technologyReport: false, dontClosePage: false, analysedUrls: analysedUrls, homepageLink: parsedUrl});
             if(resultSecondarySite.error) {
@@ -391,6 +443,14 @@ export const analyseLargeScaleDomain = async (url, browser) => {
                 }
 
             } else {
+
+                if(isMalicious(resultSecondarySite.url)) {
+                    resultSecondarySite.error = "Malicious Page";
+                    saveReportToJSONFile(resultSecondarySite, errorFolder);
+                    await db.setPagetoFailedAnalysedPage(fixedLink, resultSecondarySite.error);
+                    continue;
+                }
+
                 analysedUrls.push(resultSecondarySite.url);
                 if(isSameDomain(resultSecondarySite.url, parsedUrl)) {
                     
