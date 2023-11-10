@@ -1,0 +1,37 @@
+{
+  "tempCurrentWebsite": null,
+  "currentWebsite": null,
+  "analysedWebsites": [
+    {
+      "domain": "https://google.com",
+      "toBeAnalysed": [],
+      "analysedPages": [
+        "https://www.google.com/(homepage)",
+        "https://www.google.com/advanced_search?hl=en-gb&fg=1",
+        "https://www.google.com/preferences?hl=en-gb&fg=1",
+        "https://www.google.com/(phone)",
+        "https://store.google.com/gb?utm_source=hp_header&utm_medium=google_ooo&utm_campaign=gs100042&hl=en-gb"
+      ],
+      "failedAnalysedPages": [],
+      "totalNumberOfPages": 17
+    },
+    {
+      "domain": "https://instagram.com",
+      "toBeAnalysed": [],
+      "analysedPages": [
+        "https://www.instagram.com/(homepage)",
+        "https://www.instagram.com/(phone)",
+        "https://instagram.com/contact",
+        "https://www.instagram.com/accounts/emailsignup/",
+        "https://help.instagram.com/"
+      ],
+      "failedAnalysedPages": [
+        {
+          "url": "https://l.instagram.com/?u=https%3a%2f%2fplay.google.com%2fstore%2fapps%2fdetails%3fid%3dcom.instagram.android%26referrer%3dig_mid%253df1c3518c-924f-4b63-8681-5f8f785313c0%2526utm_campaign%253dloginpage%2526utm_content%253dlo%2526utm_source%253dinstagramweb%2526utm_medium%253dbadge&e=at2zwlnun3mbjttzmdjrwjnm232lxphv17z8ymtwutkrqufump7hniqgpctnpvd_nbrq5nasfux0p8tddkjed9yfio5-rab74qcrt8edul48z9hhmy4h54nxvdgrdjnrc3391mycnpbjq33rcrgj0g",
+          "error": "Already analysed"
+        }
+      ],
+      "totalNumberOfPages": 16
+    }
+  ]
+}
