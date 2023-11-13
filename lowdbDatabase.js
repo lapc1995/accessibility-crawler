@@ -78,6 +78,16 @@ export const setCurrentWebsite = async (domain, pages, totalNumberOfPages) => {
     });
 }
 
+export const getCurrentWebsiteTotalNumberOfPages = async () => {
+    const currentWebsite = await getCurrentWebsite();
+    if(currentWebsite == null) {
+        return;
+    }
+    return await mutex.runExclusive(async () => {
+        return db.data.currentWebsite.totalNumberOfPages;
+    });
+}
+
 export const setCurrentWebsiteTotalNumberOfPages = async (totalNumberOfPages) => {
     const currentWebsite = await getCurrentWebsite();
     if(currentWebsite == null) {
