@@ -112,7 +112,7 @@ export const getReportForURLParallel = async(url, browser, options = {}) => {
             await site.OnRequest(request, page);
         }); 
         
-        page.on('response', async (response) => {
+         page.on('response', async (response) => {
             const headers = response.headers();
             pageHeaderContentTypes.push(headers['content-type']);
             if(headers['content-type'] == "application/pdf") {
