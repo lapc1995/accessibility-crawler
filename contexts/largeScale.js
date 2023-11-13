@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import robotsParser from 'robots-txt-parser';
 import { saveHtmlToFile, saveReportToJSONFile, removeDuplicateLinks, fixLink, generateFilename, forbiddenFilenameCharacters, hasInvalidExtension, removeHashFromUrl, delay, removeNonHTTPSLinks, shuffleArray, cleanLinkList, isSameDomain, saveMhtmlToFile, withTimeout} from './../utils.js';
 import { analysePrimarySite, analyseSecondarySite, getReportForURLParallel } from '../analyser.js';
-import { waitForBrowser, browser as browserFromHandler } from '../browserHandler.js';
+import { waitForBrowser, browser } from '../browserHandler.js';
 import * as db from '../lowdbDatabase.js'//'../localDatabase.js';
 import * as largeWebsitesDB from '../largeWebsitesDatabase.js';
 
@@ -22,7 +22,7 @@ const robots = robotsParser(
 });
 
 
-async function analyizePage(browser, domain, dataFolder, errorFolder, analysedUrls, parsedUrl, link, totalNumberOfLinks) {
+async function analyizePage(domain, dataFolder, errorFolder, analysedUrls, parsedUrl, link, totalNumberOfLinks) {
     await waitForBrowser(browser);
 
     const result = {
@@ -92,12 +92,12 @@ async function analyizePage(browser, domain, dataFolder, errorFolder, analysedUr
     }
 
     try {
-        const resultSecondarySite = await getReportForURLParallel(fixedLink, browserFromHandler, {technologyReport: false, dontClosePage: false, analysedUrls: analysedUrls, homepageLink: parsedUrl});
+        const resultSecondarySite = await getReportForURLParallel(fixedLink, {technologyReport: false, dontClosePage: false, analysedUrls: analysedUrls, homepageLink: parsedUrl});
         if(resultSecondarySite.error) {
             if(resultSecondarySite.error == "Protocol error (Target.createTarget): Target closed." ||
                resultSecondarySite.error == "Navigation failed because browser has disconnected!" ||
                resultSecondarySite.error == "browser.userAgent is not a function") {
-                await waitForBrowser(browserFromHandler);
+                await waitForBrowser(browser);
             } 
 
             //saveReportToJSONFile(resultSecondarySite, errorFolder);
@@ -164,7 +164,7 @@ async function analyizePage(browser, domain, dataFolder, errorFolder, analysedUr
     }
 }
 
-const analysePhoneHomePage = async (browser, domain, dataFolder, errorFolder, url) => {
+const analysePhoneHomePage = async (domain, url) => {
 
     const result = {
         report: null,
@@ -182,7 +182,7 @@ const analysePhoneHomePage = async (browser, domain, dataFolder, errorFolder, ur
     await db.addPageToBeAnalysed(url + "(phone)");
 
     try {
-        const phoneHomePage = await getReportForURLParallel(url, browser, {technologyReport: false, dontClosePage: false, phone: true});
+        const phoneHomePage = await getReportForURLParallel(url, {technologyReport: false, dontClosePage: false, phone: true});
         phoneHomePage.url += "(phone)";
     
         if(phoneHomePage.error) {
@@ -196,7 +196,7 @@ const analysePhoneHomePage = async (browser, domain, dataFolder, errorFolder, ur
             //await db.setPagetoFailedAnalysedPage(phoneHomePage.url + "(phone)", phoneHomePage.error);
             if(phoneHomePage.error == "Protocol error (Target.createTarget): Target closed." ||
                phoneHomePage.error == "Navigation failed because browser has disconnected!") {
-                await waitForBrowser(browserFromHandler);
+                await waitForBrowser(browser);
             }
             
             return result;
@@ -225,7 +225,7 @@ const analysePhoneHomePage = async (browser, domain, dataFolder, errorFolder, ur
     }
 }
 
-const ananlyseContactPage = async(browser, domain, dataFolder, errorFolder, analysedUrls, parsedUrl, url) => {
+const analyseContactPage = async(domain, dataFolder, errorFolder, analysedUrls, parsedUrl, url) => {
     try {
         const contactUrl = new URL("contact", url);
         let contactPage = await browser.newPage();
@@ -237,7 +237,7 @@ const ananlyseContactPage = async(browser, domain, dataFolder, errorFolder, anal
         }
 
         await contactPage.close();
-        return await analyizePage(browser, domain, dataFolder, errorFolder, analysedUrls, parsedUrl, contactUrl)
+        return await analyizePage(domain, dataFolder, errorFolder, analysedUrls, parsedUrl, contactUrl)
 
     } catch(e) {
         if(e.message == "Protocol error (Target.createTarget): Target closed." ||
@@ -249,7 +249,7 @@ const ananlyseContactPage = async(browser, domain, dataFolder, errorFolder, anal
 }
 
 
-export const analyseLargeScaleDomain = async (url, browser) => {
+export const analyseLargeScaleDomain = async (url) => {
 
     await waitForBrowser();
 
@@ -360,7 +360,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
     //check that is home page
     await waitForBrowser();
 
-    let testHomePage = await browserFromHandler.newPage();
+    let testHomePage = await browser.newPage();
     let testHomePageResult = null;
 
     try {
@@ -434,7 +434,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         return;
     }
 
-    const primarySite = await analysePrimarySite(homeURL.host, browserFromHandler, {technologyReport: true, dontClosePage: false});
+    const primarySite = await analysePrimarySite(homeURL.host, {technologyReport: true, dontClosePage: false});
     if(primarySite.error) {
 
         await db.setCurrentWebsite(url, [], 0);
@@ -445,7 +445,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
         
         if(primarySite.error == "Protocol error (Target.createTarget): Target closed." || 
             primarySite.error == "Navigation failed because browser has disconnected!") {
-            await waitForBrowser(browserFromHandler);
+            await waitForBrowser(browser);
         }
 
         primarySite.filename += "(homepage)";
@@ -615,7 +615,7 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             tasks.push(limit(async () => { 
             
                 try {
-                    let result = await analysePhoneHomePage(browserFromHandler, primarySite.url, dataFolder, errorFolder, primarySite.url); 
+                    let result = await analysePhoneHomePage(primarySite.url, primarySite.url); 
                     console.log(primarySite.url, 'end');
                     return result;
                 } catch(e) {   
@@ -629,16 +629,17 @@ export const analyseLargeScaleDomain = async (url, browser) => {
             
             
             }));
-            //tasks.push(limit(async () => { return await ananlyseContactPage(browserFromHandler, primarySite.url, dataFolder, errorFolder, analysedUrls, parsedUrl, primarySite.url); }));
+            tasks.push(limit(async () => { return await analyseContactPage(primarySite.url, dataFolder, errorFolder, analysedUrls, parsedUrl, primarySite.url); }));
         
             tasks.push(limit(async () => { browser.close(); console.log("done"); return; }));
         }
 
+        
         for(let i = 0; i < requiredNumberOfLinks; i++) {
             tasks.push(limit(async () => { 
                 
                 try {
-                    let result = await analyizePage(browserFromHandler, primarySite.url, dataFolder,  errorFolder, analysedUrls, parsedUrl, filtredLinks[i]); 
+                    let result = await analyizePage(primarySite.url, dataFolder,  errorFolder, analysedUrls, parsedUrl, filtredLinks[i]); 
                     console.log(filtredLinks[i], 'end');
                     return result;
                 } catch(e) {   

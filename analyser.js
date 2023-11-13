@@ -3,23 +3,23 @@ import puppeteer from 'puppeteer';
 import { generateFilename } from './utils.js';
 import { AxePuppeteer } from '@axe-core/puppeteer';
 import { delay, withTimeout, hasInvalidExtension, isSameDomain, getPackageVersions } from './utils.js';
-import { waitForBrowser } from './browserHandler.js';
+import { waitForBrowser, browser} from './browserHandler.js';
 
 const packageVersions = getPackageVersions();
 
-export const analysePrimarySite = async (url, browser) => {
-    return await getReportForURLParallel(url, browser, {technologyReport: true}) 
+export const analysePrimarySite = async (url) => {
+    return await getReportForURLParallel(url, {technologyReport: true}) 
 }
   
-export const analyseSecondarySite = async (url, browser) => {
-    return await getReportForURLParallel(url, browser);
+export const analyseSecondarySite = async (url) => {
+    return await getReportForURLParallel(url);
 }
   
-export const analysePhoneSite = async (url, browser) => {
-    return await getReportForURLParallel(url, browser, {phone: true}) 
+export const analysePhoneSite = async (url) => {
+    return await getReportForURLParallel(url, {phone: true}) 
 }
 
-export const getReportForURLParallel = async(url, browser, options = {}) => {
+export const getReportForURLParallel = async(url, options = {}) => {
 
     try {
 
