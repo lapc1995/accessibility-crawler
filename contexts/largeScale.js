@@ -607,17 +607,27 @@ export const analyseLargeScaleDomain = async (url) => {
     let numberOfLinks = filtredLinks.length;
     let numberOfLinksOriginal = filtredLinks.length;
 
-    for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i++) {
+    let numberOfLinksLeft = requiredNumberOfLinks - successfullLinksCounter;
+    let i = 0;
+
+    while(i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount) {
+
+    //for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i+=numberOfLinksLeft) {
 
         const tasks = [];
+
+        numberOfLinksLeft = requiredNumberOfLinks - successfullLinksCounter;
+
+        let startIndex = i;
 
         if(i == 0) {
             tasks.push(limit(async () => await analysePhoneHomePage(primarySite.url, primarySite.url)));
             tasks.push(limit(async () => { return await analyseContactPage(primarySite.url, dataFolder, errorFolder, analysedUrls, parsedUrl, primarySite.url); }));
         }
 
-        for(let i = 0; i < requiredNumberOfLinks; i++) {
-            tasks.push(limit(async () => await analyizePage(primarySite.url, dataFolder,  errorFolder, analysedUrls, parsedUrl, filtredLinks[i], numberOfLinks)));   
+        for(let j = i; j < startIndex + numberOfLinksLeft; j++) {
+            tasks.push(limit(async () => await analyizePage(primarySite.url, dataFolder,  errorFolder, analysedUrls, parsedUrl, filtredLinks[j], numberOfLinks)));   
+            i+=1;
         }
 
         const result = await Promise.all(tasks);
@@ -682,7 +692,9 @@ export const analyseLargeScaleDomain = async (url) => {
                 }
             } else {
                 analysedUrls.push(pageReport.url);
-                successfullLinksCounter++;
+                if(!(pageReport.url.includes("(phone)") || pageReport.url.endsWith("/contact"))) {
+                    successfullLinksCounter++;
+                }
                 await db.setPageToAnalysed(pageReport.url);
                 saveMhtmlToFile(dataFolder, pageReport.report.filename, pageReport.report.mhtml);
                 delete pageReport.report.html;
@@ -690,6 +702,7 @@ export const analyseLargeScaleDomain = async (url) => {
                 saveReportToJSONFile(pageReport.report, dataFolder);
             }
         }
+        console.log("going to loop again")
     }
     /*
     for(let i = 0; i < filtredLinks.length && successfullLinksCounter < requiredNumberOfLinks && retryCounter < retryAmount; i++) {
