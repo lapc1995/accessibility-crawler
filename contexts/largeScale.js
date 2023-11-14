@@ -602,7 +602,7 @@ export const analyseLargeScaleDomain = async (url) => {
         }
     }*/
 
-    const limit = pLimit(2);
+    const limit = pLimit(5);
 
     let numberOfLinks = filtredLinks.length;
     let numberOfLinksOriginal = filtredLinks.length;
@@ -612,47 +612,15 @@ export const analyseLargeScaleDomain = async (url) => {
         const tasks = [];
 
         if(i == 0) {
-            tasks.push(limit(async () => { 
-            
-                try {
-                    let result = await analysePhoneHomePage(primarySite.url, primarySite.url); 
-                    console.log(primarySite.url, 'end');
-                    return result;
-                } catch(e) {   
-                
-                    console.log(e);
-                    return null;
-                }
-                
-                
-            
-            
-            
-            }));
+            tasks.push(limit(async () => await analysePhoneHomePage(primarySite.url, primarySite.url)));
             tasks.push(limit(async () => { return await analyseContactPage(primarySite.url, dataFolder, errorFolder, analysedUrls, parsedUrl, primarySite.url); }));
-        
-            tasks.push(limit(async () => { browser.close(); console.log("done"); return; }));
         }
 
-        
         for(let i = 0; i < requiredNumberOfLinks; i++) {
-            tasks.push(limit(async () => { 
-                
-                try {
-                    let result = await analyizePage(primarySite.url, dataFolder,  errorFolder, analysedUrls, parsedUrl, filtredLinks[i]); 
-                    console.log(filtredLinks[i], 'end');
-                    return result;
-                } catch(e) {   
-                
-                    console.log(e);
-                    return null;
-                }
-                
-               
-            }));   
+            tasks.push(limit(async () => await analyizePage(primarySite.url, dataFolder,  errorFolder, analysedUrls, parsedUrl, filtredLinks[i], numberOfLinks)));   
         }
 
-        const result = await Promise.allSettled(tasks);
+        const result = await Promise.all(tasks);
         console.log(result);
 
         const linkMap = new Map();
@@ -703,7 +671,7 @@ export const analyseLargeScaleDomain = async (url) => {
                     }
 
                 } else {
-                    await db.setPagetoFailedAnalysedPage(pageReport.url, resultSecondarySite.error);
+                    await db.setPagetoFailedAnalysedPage(pageReport.url, pageReport.report.error);
                     if(pageReport.report != null) {
                         saveReportToJSONFile(pageReport.report, errorFolder);
                     }
