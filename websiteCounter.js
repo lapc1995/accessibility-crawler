@@ -16,21 +16,35 @@ const jwt = new JWT({
 });
 
 
+console.log("Connecting to Google Sheets");
+const doc = new GoogleSpreadsheet(process.env.SHEET_FILE_ID, jwt);
+console.log("Connected to Google Sheets");
+
 async function updateWebsites() {
+    console.log("Reading largeScaleDB.json");
     const dbRaw = await fs.readFile(`./largeScaleDB.json`, 'utf8');
+    console.log("Parsing largeScaleDB.json");
     const db = JSON.parse(dbRaw);
-    const analysedWebsites =  db['analysedWebsites'].length;
-    const doc = new GoogleSpreadsheet(process.env.SHEET_FILE_ID, jwt);
+    const analysedWebsites = db['analysedWebsites'].length;
+    console.log("Analysed websites", analysedWebsites);
     await doc.loadInfo();
-    const sheet = doc.sheetsByIndex[process.env.SHEET_NUMBER];
+    let sheet = doc.sheetsByIndex[process.env.SHEET_NUMBER];
     const rows = await sheet.getRows();
-    rows[0].assign({ 'Websites Finished': analysedWebsites, 'Last Updated': new Date() }); // set multiple values
-    await rows[0].save(); // save updates on a row
+    //rows[0].assign({ 'Websites Finished': analysedWebsites, 'Last Updated': new Date() }); // set multiple values
+    await sheet.addRow({ 'Websites Finished': analysedWebsites, 'Last Updated': new Date() }); // add a row
+    //await rows[0].save(); // save updates on a row
+    console.log(sheet.cellStats)
+    console.log(rows.length)
 }
 
 (async () => {
-    await updateWebsites();
-});
+    try {
+        await updateWebsites();
+    }
+    catch (e) {
+        console.log("Error", e);
+    }
+})()
 
 var requestLoop = setInterval(async () => {
     try {
@@ -38,5 +52,5 @@ var requestLoop = setInterval(async () => {
     } catch(e) {    
         console.log("Error", e);
     }
-  },  5 * 60000);
+  },  process.env.UPDATE_INTERVAL * 60000);
   
