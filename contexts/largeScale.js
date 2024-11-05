@@ -547,11 +547,11 @@ export const analyseLargeScaleDomain = async (url) => {
     }
 
 
-    if(filtredLinks.length > 100) {
+   /* if(filtredLinks.length > 100) {
         largeWebsitesDB.addLargeWebsite(url, filtredLinks.length);
         await db.setCurrentWebsiteToAnalysed();
         return;
-    } else if(filtredLinks.length < 11) {
+    } else */if(filtredLinks.length < 11) {
         requiredNumberOfLinks = filtredLinks.length;
         retryAmount = filtredLinks.length
     }

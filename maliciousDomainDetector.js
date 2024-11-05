@@ -2,7 +2,6 @@ import { readWebsiteCSV } from './utils.js';
 import psl from 'psl';
 
 let maliciousDomainsList = await readWebsiteCSV('./blackbook.csv');
-console.log(maliciousDomainsList)
 
 maliciousDomainsList = maliciousDomainsList.map((domain) => domain['Domain']);
 

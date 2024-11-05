@@ -23,6 +23,10 @@ export const getReportForURLParallel = async(url, options = {}) => {
 
     try {
 
+        const delayTime = Math.floor(Math.random() * (3000 - 1000 + 1) + 1000);
+        console.log(delayTime);
+        await delay(delayTime);
+
         await waitForBrowser();
         await waitForBrowser();
 
